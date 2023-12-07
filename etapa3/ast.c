@@ -38,7 +38,6 @@ void _print_ast(FILE* file, AstNode* node, int depth){
 		TPRINT(AST_EXP_ARRAY_ACESS);
 		TPRINT(AST_EXP_FUN_CALL);
 		TPRINT(AST_EXP_INPUT);
-		TPRINT(AST_EXP_PARENTESES);
 		TPRINT(AST_EXP_NEG);
 		TPRINT(AST_EXP_SUM);
 		TPRINT(AST_EXP_SUB);
@@ -188,74 +187,94 @@ void print_rebuild_file(FILE* file, AstNode* node){
 		REC(&node->children[0]->branch);
 		fprintf(file, ") ");
 		break;
-	case AST_EXP_PARENTESES:
-		fprintf(file, "(");
-		REC(&node->children[0]->branch);
-		fprintf(file, ") ");
-		break;
 	case AST_EXP_NEG:
-		fprintf(file, "~ ");
+		fprintf(file, "(~");
 		REC(&node->children[0]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_SUM:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " + ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_SUB:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " - ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_MUL:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " * ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_DIV:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " / ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_LESS:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " < ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_GREAT:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " > ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_LE:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " <= ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_GE:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " >= ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_EQ:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " == ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_DIF:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " != ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_AND:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " & ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_EXP_OR:
+		fprintf(file, "(");
 		REC(&node->children[0]->branch);
 		fprintf(file, " | ");
 		REC(&node->children[1]->branch);
+		fprintf(file, ")");
 		break;
 	case AST_FUN_PARAM:
 		fprintf(file, ", ");

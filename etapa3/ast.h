@@ -39,7 +39,6 @@
 #define AST_EXP_ARRAY_ACESS ((16 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
 #define AST_EXP_FUN_CALL ((17 << LPAD) | LAYOUT(0, 1, 1, 0) | 3)
 #define AST_EXP_INPUT ((18 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
-#define AST_EXP_PARENTESES ((19 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
 #define AST_EXP_NEG ((20 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
 #define AST_EXP_SUM ((21 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
 #define AST_EXP_SUB ((22 << LPAD) | LAYOUT(1, 1, 0, 0) | 2) 

@@ -119,7 +119,7 @@ exp : TK_IDENTIFIER                      { $$ = TNODE(AST_EXP_IDENTIFIER, $1); }
 	| TK_IDENTIFIER '[' exp ']'          { $$ = TNODE(AST_EXP_ARRAY_ACESS, $1, $3); }
 	| TK_IDENTIFIER '(' exp funParam ')' { $$ = TNODE(AST_EXP_FUN_CALL, $1, $3, $4); }
 	| KW_INPUT '(' tipo ')'              { $$ = TNODE(AST_EXP_INPUT, $3); }
-	| '(' exp ')'                        { $$ = TNODE(AST_EXP_PARENTESES, $2); }
+	| '(' exp ')'                        { $$ = $2; }
 	| '~' exp                            { $$ = TNODE(AST_EXP_NEG, $2); }
     | exp '+' exp                        { $$ = TNODE(AST_EXP_SUM, $1, $3); }
     | exp '-' exp                        { $$ = TNODE(AST_EXP_SUB, $1, $3); }
@@ -139,7 +139,7 @@ funParam: ',' exp funParam  { $$ = TNODE(AST_FUN_PARAM, $2, $3); }
 	|                       { $$ = NULL; }
 	;
 
-code: KW_CODE TK_IDENTIFIER startCmd;  { $$ = TNODE(AST_CODE, $2, $3); }
+code: KW_CODE TK_IDENTIFIER startCmd  { $$ = TNODE(AST_CODE, $2, $3); };
 
 startCmd: '{' cmd '}'  { $$ = TNODE(AST_START_CMD_BLOCK, $2); }
 	| action           { $$ = TNODE(AST_START_CMD_ACTION, $1); }
