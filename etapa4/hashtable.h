@@ -20,7 +20,9 @@
 typedef struct hash_node{
 	char* key;
 	int val;
-	int type;
+	char type;
+	char nature;
+	char is_implemented;
 	void* param_list;	//pointer para a AST
 	struct hash_node* next;
 } HashNode;

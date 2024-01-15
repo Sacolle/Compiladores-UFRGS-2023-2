@@ -65,7 +65,8 @@
 %type <ast> paramLista
 %type <ast> paramListaContinua
 %type <ast> exp
-%type <ast> funParam
+%type <ast> callFunParam
+%type <ast> callFunParamContinua
 %type <ast> code
 %type <ast> startCmd
 %type <ast> cmd
@@ -117,7 +118,7 @@ paramListaContinua: ',' tipo TK_IDENTIFIER paramListaContinua { $$ = TNODE(AST_P
 exp : TK_IDENTIFIER                      { $$ = TNODE(AST_EXP_IDENTIFIER, $1); }                      
     | literal                            { $$ = TNODE(AST_EXP_LITERAL, $1); }
     | TK_IDENTIFIER '[' exp ']'          { $$ = TNODE(AST_EXP_ARRAY_ACESS, $1, $3); }
-    | TK_IDENTIFIER '(' exp funParam ')' { $$ = TNODE(AST_EXP_FUN_CALL, $1, $3, $4); }
+    | TK_IDENTIFIER '(' callFunParam ')' { $$ = TNODE(AST_EXP_CALL_FUN, $1, $3); }
     | KW_INPUT '(' tipo ')'              { $$ = TNODE(AST_EXP_INPUT, $3); }
 	| '(' exp ')'                        { $$ = $2; }
     | '~' exp                            { $$ = TNODE(AST_EXP_NEG, $2); }
@@ -135,8 +136,12 @@ exp : TK_IDENTIFIER                      { $$ = TNODE(AST_EXP_IDENTIFIER, $1); }
     | exp '|' exp                        { $$ = TNODE(AST_EXP_OR, $1, $3); }
     ;
 
-funParam: ',' exp funParam  { $$ = TNODE(AST_FUN_PARAM, $2, $3); }
-	|                       { $$ = NULL; }
+callFunParam: exp callFunParamContinua  { $$ = TNODE(AST_CALL_FUN_PARAM, $1, $2); }
+	|                       			{ $$ = NULL; }
+	;
+
+callFunParamContinua: ',' exp callFunParamContinua { $$ = TNODE(AST_CALL_FUN_PARAM_CONTINUA, $2, $3); }
+	|						                       { $$ = NULL; }
 	;
 
 code: KW_CODE TK_IDENTIFIER startCmd  { $$ = TNODE(AST_CODE, $2, $3); };

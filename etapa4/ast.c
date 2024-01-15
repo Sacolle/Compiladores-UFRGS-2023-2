@@ -2,9 +2,16 @@
 
 #include <stdlib.h>
 
+//declado em scanner.l
+extern int getLineNumber();
+
+
 AstNode* build_ast(int type, void* c0, void* c1, void* c2, void* c3){
 	AstNode* node = (AstNode*) malloc(sizeof(AstNode));
 	node->type = type;
+	node->line_number = getLineNumber();
+	node->data_type = 0;
+	node->data_nat = 0;
 	node->children[0] = c0;
 	node->children[1] = c1;
 	node->children[2] = c2;
@@ -16,7 +23,8 @@ AstNode* build_ast(int type, void* c0, void* c1, void* c2, void* c3){
 void _print_ast(FILE* file, AstNode* node, int depth){
 	if(node == NULL) return;
 	int i = depth;
-	while(i--) fprintf(file, " "); //NOTE: while(0) run?
+	fprintf(file, "%d.", node->line_number);
+	while(i--) fprintf(file, " ");
 
 	#define TPRINT(t) case t: fprintf(file, # t); break
 	switch (node->type){
@@ -36,7 +44,7 @@ void _print_ast(FILE* file, AstNode* node, int depth){
 		TPRINT(AST_PARAM_LISTA);
 		TPRINT(AST_PARAM_LISTA_CONTINUA);
 		TPRINT(AST_EXP_ARRAY_ACESS);
-		TPRINT(AST_EXP_FUN_CALL);
+		TPRINT(AST_EXP_CALL_FUN);
 		TPRINT(AST_EXP_INPUT);
 		TPRINT(AST_EXP_NEG);
 		TPRINT(AST_EXP_SUM);
@@ -51,7 +59,8 @@ void _print_ast(FILE* file, AstNode* node, int depth){
 		TPRINT(AST_EXP_DIF);
 		TPRINT(AST_EXP_AND);
 		TPRINT(AST_EXP_OR);
-		TPRINT(AST_FUN_PARAM);
+		TPRINT(AST_CALL_FUN_PARAM);
+		TPRINT(AST_CALL_FUN_PARAM_CONTINUA);
 		TPRINT(AST_CODE);
 		TPRINT(AST_START_CMD_BLOCK);
 		TPRINT(AST_START_CMD_ACTION);
@@ -176,10 +185,9 @@ void print_rebuild_file(FILE* file, AstNode* node){
 		REC(&node->children[1]->branch);
 		fprintf(file, "] ");
 		break;
-	case AST_EXP_FUN_CALL:
+	case AST_EXP_CALL_FUN:
 		fprintf(file, "%s(", node->children[0]->leaf.key);
 		REC(&node->children[1]->branch);
-		REC(&node->children[2]->branch);
 		fprintf(file, ") ");
 		break;
 	case AST_EXP_INPUT:
@@ -276,7 +284,11 @@ void print_rebuild_file(FILE* file, AstNode* node){
 		REC(&node->children[1]->branch);
 		fprintf(file, ")");
 		break;
-	case AST_FUN_PARAM:
+	case AST_CALL_FUN_PARAM:
+		REC(&node->children[0]->branch);
+		REC(&node->children[1]->branch);
+		break;
+	case AST_CALL_FUN_PARAM_CONTINUA:
 		fprintf(file, ", ");
 		REC(&node->children[0]->branch);
 		REC(&node->children[1]->branch);

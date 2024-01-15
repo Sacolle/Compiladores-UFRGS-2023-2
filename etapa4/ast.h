@@ -36,55 +36,55 @@
 #define AST_VALOR_LISTA ((13 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
 #define AST_PARAM_LISTA ((14 << LPAD) | LAYOUT(1, 0, 1, 0) | 3)
 #define AST_PARAM_LISTA_CONTINUA ((15 << LPAD) | LAYOUT(1, 0, 1, 0) | 3)
-#define AST_EXP_ARRAY_ACESS ((16 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
-#define AST_EXP_FUN_CALL ((17 << LPAD) | LAYOUT(0, 1, 1, 0) | 3)
-#define AST_EXP_INPUT ((18 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
-#define AST_EXP_NEG ((20 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
-#define AST_EXP_SUM ((21 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_SUB ((22 << LPAD) | LAYOUT(1, 1, 0, 0) | 2) 
-#define AST_EXP_MUL ((23 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_DIV ((24 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_LESS ((25 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_GREAT ((26 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_LE ((27 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_GE ((28 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_EQ ((29 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_DIF ((30 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_AND ((31 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_EXP_OR ((32 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_FUN_PARAM ((33 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_CODE ((34 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
-#define AST_START_CMD_BLOCK ((35 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
-#define AST_START_CMD_ACTION ((36 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
-#define AST_START_CMD_FLOW ((37 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
-#define AST_CMD_BLOCK ((38 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_CMD_ACTION ((39 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_CMD_FLOW ((40 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_FLOW_WHILE ((41 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_FLOW_IF ((42 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
-#define AST_FLOW_ELSEIF ((43 << LPAD) | LAYOUT(1, 1, 1, 0) | 3)
-#define AST_ACTION_ASSIGN ((44 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
-#define AST_ACTION_ASSIGN_ARRAY ((45 << LPAD) | LAYOUT(0, 1, 1, 0) | 3)
-#define AST_ACTION_RETURN ((46 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
-#define AST_ACTION_PRINT_EXP ((47 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
-#define AST_ACTION_PRINT_STRING ((48 << LPAD) | LAYOUT(0, 0, 0, 0) | 1)
-#define AST_SEMICOLON ((49 << LPAD) | LAYOUT(0, 0, 0, 0) | 0)
-//extras
-#define AST_EXP_IDENTIFIER ((50 << LPAD) | LAYOUT(0, 0, 0, 0) | 1)
-#define AST_EXP_LITERAL ((51 << LPAD) | LAYOUT(0, 0, 0, 0) | 1)
+#define AST_EXP_IDENTIFIER ((16 << LPAD) | LAYOUT(0, 0, 0, 0) | 1)
+#define AST_EXP_LITERAL ((17 << LPAD) | LAYOUT(0, 0, 0, 0) | 1)
+#define AST_EXP_ARRAY_ACESS ((18 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
+#define AST_EXP_CALL_FUN ((19 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
+#define AST_EXP_INPUT ((20 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
+#define AST_EXP_NEG ((21 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
+#define AST_EXP_SUM ((22 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_SUB ((23 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_MUL ((24 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_DIV ((25 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_LESS ((26 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_GREAT ((27 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_LE ((28 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_GE ((29 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_EQ ((30 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_DIF ((31 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_AND ((32 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_EXP_OR ((33 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_CALL_FUN_PARAM ((34 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_CALL_FUN_PARAM_CONTINUA ((35 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_CODE ((36 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
+#define AST_START_CMD_BLOCK ((37 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
+#define AST_START_CMD_ACTION ((38 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
+#define AST_START_CMD_FLOW ((39 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
+#define AST_CMD_BLOCK ((40 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_CMD_ACTION ((41 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_CMD_FLOW ((42 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_FLOW_WHILE ((43 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_FLOW_IF ((44 << LPAD) | LAYOUT(1, 1, 0, 0) | 2)
+#define AST_FLOW_ELSEIF ((45 << LPAD) | LAYOUT(1, 1, 1, 0) | 3)
+#define AST_ACTION_ASSIGN ((46 << LPAD) | LAYOUT(0, 1, 0, 0) | 2)
+#define AST_ACTION_ASSIGN_ARRAY ((47 << LPAD) | LAYOUT(0, 1, 1, 0) | 3)
+#define AST_ACTION_RETURN ((48 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
+#define AST_ACTION_PRINT_EXP ((49 << LPAD) | LAYOUT(1, 0, 0, 0) | 1)
+#define AST_ACTION_PRINT_STRING ((50 << LPAD) | LAYOUT(0, 0, 0, 0) | 1)
+#define AST_SEMICOLON ((51 << LPAD) | LAYOUT(0, 0, 0, 0) | 0)
 
 #include <stdio.h>
 #include "hashtable.h"
 
-
 #define MAX_CHILDREN 4
-
 
 union node_type;
 
-
 typedef struct ast_node{
 	int type;
+	int line_number;
+	char data_type;
+	char data_nat;
 	union node_type* children[MAX_CHILDREN]; 
 } AstNode;
 

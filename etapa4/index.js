@@ -22,12 +22,26 @@ function defines_tprint(defs){
 function defines_rewrite(defs){
 	defs.forEach(e => console.log(
 	`case ${e.toUpperCase().replace(/,.*/, '')}:
-    ${e.split(',').slice(1).join('\n    ')}
+    /*${e.split(',').slice(1).join('\n    ')}*/
     break;`
 	)) 
 }
 
-defines_rewrite(defines)
+function parses_rewrite(defs){
+	defs.forEach(e => console.log(
+	`PARSE(${e.toUpperCase().replace(/,.*/, '')}); break;`
+	)) 
+}
+
+function parses_functions(defs){
+	defs.forEach(e => console.log(
+	`void parse_${e.toUpperCase().replace(/,.*/, '')}(AstNode* ast){
+
+}`
+	)) 
+}
+parses_functions(defines)
+//defines_rewrite(defines)
 //defines_declarations(defines)
 
 

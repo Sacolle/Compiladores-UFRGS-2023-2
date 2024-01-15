@@ -15,6 +15,7 @@ extern HashTable *g_table; //NOTE: g_table é declarada no scanner.l
 extern AstNode *g_syntax_tree;
 extern void initGlobalHashTable(void);
 extern int yyparse();
+extern int g_error_counter;
 
 int main(int argc, char** argv){
 	if (argc < 2){
@@ -30,14 +31,16 @@ int main(int argc, char** argv){
 	yyparse();
 
 	semantic_pass();
-
-	//print_rebuild_file(output, g_syntax_tree);
 	//print_ast(stderr, g_syntax_tree);
-	//print_table(g_table);
-	
-	fprintf(stderr, "Sucesso na compilação!\n");
-	exit(0);
+	//print_rebuild_file(stdout, g_syntax_tree);
 
+	if(g_error_counter){
+		fprintf(stderr, "Falha na compilação! %d errors encontrados!\n", g_error_counter);
+		exit(4);
+	}else{
+		fprintf(stderr, "Sucesso na compilação!\n");
+		exit(0);
+	}
 	return 0;
 }
 

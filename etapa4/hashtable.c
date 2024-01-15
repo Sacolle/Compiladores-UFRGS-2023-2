@@ -37,6 +37,8 @@ HashNode* _new_hashnode(char* key, int val){
 	strcpy(node->key, key);
 	node->val = val;
 	node->type = 0;
+	node->nature = 0;
+	node->is_implemented = 0;
 	node->param_list = NULL;
 
 	return node;

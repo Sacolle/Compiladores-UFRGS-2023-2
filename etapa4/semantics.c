@@ -4,6 +4,9 @@
 extern HashTable *g_table; 
 extern AstNode *g_syntax_tree;
 
+int g_error_counter = 0;
+int g_line_number = 0;
+
 /*
 * - todos os identificadores usados em assingmets devem ser declarados
 * - identificadores só podem ser declarados 1 vez
@@ -48,6 +51,7 @@ extern AstNode *g_syntax_tree;
     - ~~verificar índices dos vetores (não pode ser booleano, não pode ser real), tanto na
 	expressão quanto na atribuição~~
 */
+/*
 void parse_start_cmds(AstNode* start_cmd, HashNode* fn_identifier);
 void parse_declaration(AstNode* ast);
 void validate_function_args(AstNode* exp, AstNode* param_list);
@@ -57,13 +61,14 @@ void parse_cmds(AstNode* cmd, HashNode* fn_identifier);
 void parse_flow(AstNode* flow, HashNode* fn_identifier);
 void parse_action(AstNode* action, HashNode* fn_identifier);
 void parse_function(AstNode* ast);
+*/
 
 char* type_to_string(int t){
 	switch (t){
 		case TYPE_BOOL: return "bool";
 		case TYPE_INTE: return "int";
 		case TYPE_REAL: return "real";
-		default: exit(5); return "";
+		default: return "";
 	}
 }
 
@@ -74,7 +79,7 @@ int ast_type_to_type(int t){
 		return TYPE_INTE;
 	case AST_KW_FLOAT: 
 		return TYPE_REAL;
-	default: printf("conversion failed, type received was %d >> 7 = %d", t, t >> 7); exit(5); return 0; //O switch acima é para ser exaustivo
+	default: printf("conversion failed, type received was %d >> 7 = %d", t, t >> 7); g_error_counter++; return 0;
 	}
 }
 
@@ -89,333 +94,536 @@ int hash_type_to_type(int t){
 	}
 }
 
-void parse_declaration(AstNode* ast){
-	HashNode* identifier = &ast->children[1]->leaf;
-	AstNode* list;
-	int array_size, decl_type;
-	//already has a type
+//se type != 0, então o identifier já foi declarado e já tem tipo, então
+//o g_error_counter é incrementado
+int indentifier_not_declared(HashNode* identifier){
 	if(identifier->type){
-		fprintf(stderr, "identificador %s já foi declarado neste programa.\n", identifier->key);
-		exit(4);
+		fprintf(stderr, "LINHA %d: identificador %s já foi declarado neste programa.\n", 
+			g_line_number, identifier->key
+		);
+		g_error_counter++;
+		return 0;
+	}else{
+		return 1;
 	}
-	decl_type = ast_type_to_type(ast->children[0]->branch.type);
+}
 
-	switch (ast->type){
-	case AST_DECLARACAO: 
-		identifier->type = NAT_VAL | decl_type;
-		if(hash_type_to_type(ast->children[2]->leaf.val) != GET_TYPE(identifier)){
-			fprintf(stderr, "identificador %s e literal %s tem tipos incompatíveis.\n",
-				identifier->key, 
-				ast->children[2]->leaf.key
+void parse_AST_DECLARACAO(AstNode* ast){
+	int type = ast_type_to_type(ast->children[0]->branch.type);
+	HashNode* identifier = (HashNode*) ast->children[1];
+	HashNode* literal = (HashNode*) ast->children[2];
+
+	if(indentifier_not_declared(identifier)){
+		identifier->type = type;
+		identifier->nature = NAT_VAL;
+	}
+
+	if(hash_type_to_type(literal->val) != type){
+		fprintf(stderr, "LINHA %d: literal %s e tipo da declaração são incompatíveis.\n",
+			g_line_number, literal->key
+		);
+		g_error_counter++;
+	}
+}
+void parse_AST_DECLARACAO_ARRAY(AstNode* ast){
+	int type = ast_type_to_type(ast->children[0]->branch.type);
+	int array_size = atoi(ast->children[2]->leaf.key);
+	HashNode* identifier = (HashNode*) ast->children[1];
+	AstNode* list = (AstNode*) ast->children[3];
+
+	if(indentifier_not_declared(identifier)){
+		identifier->type = type;
+		identifier->nature = NAT_VEC;
+	}
+	if(list == NULL){
+		return;
+	}
+
+	for(int i = 0; i < array_size; i++){
+		if(hash_type_to_type(list->children[0]->leaf.val) != type){
+			fprintf(stderr, "LINHA %d: literal %s e tipo declarado são incompatíveis.\n",
+				g_line_number,
+				list->children[0]->leaf.key
 			);
-			exit(4);
+			g_error_counter++;
 		}
-	break;
-	case AST_DECLARACAO_ARRAY:
-		identifier->type = NAT_VEC | decl_type;
+		// a lista tem menos filhos q declarado
+		if((list->children[1] == NULL) && (i != array_size - 1)){
+			fprintf(stderr, "LINHA %d: Lista %s tem menos filhos do que declarado.\n", g_line_number, identifier->key);
+			g_error_counter++;
+		}
+		list = &list->children[1]->branch;
+	}
+	//tem mais literais do que declarados
+	if(list != NULL){
+		fprintf(stderr, "LINHA %d: Lista %s tem mais filhos do que declarado.\n", g_line_number, identifier->key);
+		g_error_counter++;
+	}
+}
+void parse_AST_DECLARACAO_FUN(AstNode* ast){
+	int type = ast_type_to_type(ast->children[0]->branch.type);
+	HashNode* identifier = (HashNode*) ast->children[1];
 
-		list = &ast->children[3]->branch;
-		if(list == NULL) break; 
-		
-		array_size = atoi(ast->children[2]->leaf.key);
+	if(indentifier_not_declared(identifier)){
+		identifier->type = type;
+		identifier->nature = NAT_FUN;
+		identifier->param_list = (AstNode*) ast->children[2];
+		identifier->is_implemented = 1;
+	}
+}
+void parse_function_parameter_list(AstNode* ast){
+	int type = ast_type_to_type(ast->children[0]->branch.type);
+	HashNode* identifier = (HashNode*) ast->children[1];
 
-		for(int i = 0; i < array_size; i++){
-			if(hash_type_to_type(list->children[0]->leaf.val) != GET_TYPE(identifier)){
-				fprintf(stderr, "identificador %s e literal %s tem tipos incompatíveis.\n",
-					identifier->key, 
-					list->children[0]->leaf.key
-				);
-				exit(4);
+	if(indentifier_not_declared(identifier)){
+		identifier->type = type;
+		identifier->nature = NAT_VAL;
+	}
+	ast->data_nat = NAT_VAL;
+	ast->data_type = type;
+}
+void parse_AST_EXP_IDENTIFIER(AstNode* ast){
+	HashNode* identifier = (HashNode*) ast->children[0];
+	if(identifier->nature == 0){
+		fprintf(stderr, "LINHA %d: identificador %s não foi declarado.\n",
+			g_line_number,
+			identifier->key
+		);
+		g_error_counter++;
+	}
+	if(identifier->nature != NAT_VAL){
+		fprintf(stderr, "LINHA %d: identificador %s não foi declarado como valor.\n",
+			g_line_number,
+			identifier->key
+		);
+		g_error_counter++;
+	}
+	ast->data_nat = NAT_VAL;
+	ast->data_type = identifier->type;
+}
+void parse_AST_EXP_LITERAL(AstNode* ast){
+	ast->data_nat = NAT_VAL;
+	ast->data_type = hash_type_to_type(ast->children[0]->leaf.val);
+}
+void parse_AST_EXP_ARRAY_ACESS(AstNode* ast){
+	HashNode* identifier = (HashNode*) ast->children[0];
+	if(identifier->nature == 0){
+		fprintf(stderr, "LINHA %d: identificador %s não foi declarado.\n",
+			g_line_number,
+			identifier->key
+		);
+		g_error_counter++;
+	}
+
+	if(identifier->nature != NAT_VEC){
+		fprintf(stderr, "LINHA %d: Não pode-se indexar o identificador %s, pois este não é um vetor.\n",
+			g_line_number,
+			identifier->key
+		);
+		g_error_counter++;
+	}
+
+	ast->data_nat = NAT_VAL;
+	ast->data_type = ast->children[0]->leaf.type;
+	
+	if(ast->children[1]->branch.data_type != TYPE_INTE){
+		fprintf(stderr, "LINHA %d: o valor de indexação deve ser do tipo inteiro.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(ast->children[1]->branch.data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: o token de indexação deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+}
+//TODO: validar que isto está funcionando
+void validate_function_args(HashNode* fn_identifier, AstNode* called_param, AstNode* declared_param){
+	if(called_param != NULL && declared_param == NULL){
+		fprintf(stderr, "LINHA %d: função %s foi chamada com mais argumentos do que esperado.\n", 
+			g_line_number,
+			fn_identifier->key
+		);
+		g_error_counter++;
+		return;
+	}
+	if(called_param == NULL && declared_param != NULL){
+		fprintf(stderr, "LINHA %d: função %s foi chamada com menos argumentos do que esperado.\n", 
+			g_line_number,
+			fn_identifier->key
+		);
+		g_error_counter++;
+		return;
+	}
+	if(called_param == NULL && declared_param == NULL) return;
+
+	if(called_param->data_type != declared_param->data_type){
+		fprintf(stderr, "LINHA %d: argumento da função %s foi chamado com um tipo incompatível.\n",
+			g_line_number,
+			fn_identifier->key
+		);
+		g_error_counter++;
+	}
+	validate_function_args(fn_identifier,
+		(AstNode*) called_param->children[1],
+		(AstNode*) declared_param->children[2]
+	);
+
+}
+
+void parse_AST_EXP_CALL_FUN(AstNode* ast){
+	HashNode* identifier = (HashNode*) ast->children[0];
+	if(identifier->nature == 0){
+		fprintf(stderr, "LINHA %d: identificador %s não foi declarado.\n",
+			g_line_number,
+			identifier->key
+		);
+		g_error_counter++;
+	}
+	if(identifier->nature != NAT_FUN){
+		fprintf(stderr, "LINHA %d: identificador %s não foi declarado como função.\n",
+			g_line_number,
+			identifier->key
+		);
+		g_error_counter++;
+	}
+	ast->data_nat = NAT_VAL;
+	ast->data_type = identifier->type;
+
+	validate_function_args(identifier,(AstNode*) ast->children[1], identifier->param_list);
+}
+
+void parse_function_call_list(AstNode* ast){
+	AstNode* exp = (AstNode*) ast->children[0];
+	
+	if(exp->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	ast->data_nat = NAT_VAL;
+	ast->data_type = exp->data_type;
+}
+
+void parse_AST_EXP_INPUT(AstNode* ast){
+	ast->data_nat = NAT_VAL;
+	ast->data_type = ast_type_to_type(ast->children[0]->branch.type);
+}
+void parse_AST_EXP_NEG(AstNode* ast){
+	AstNode* c1 = (AstNode*) ast->children[0];
+	if(c1->data_type != TYPE_BOOL){
+		fprintf(stderr, "LINHA %d: a expressão deve ser do tipo inteiro.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c1->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+
+	ast->data_nat = NAT_VAL;
+	ast->data_type = TYPE_BOOL;
+}
+void parse_ast_binop_num_to_num(AstNode* ast){
+	AstNode* c1 = (AstNode*) ast->children[0];
+	AstNode* c2 = (AstNode*) ast->children[1];
+
+	if(c1->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da esquerda deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c2->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da direita deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c1->data_type == TYPE_BOOL){
+		fprintf(stderr, "LINHA %d: a expressão da esquerda não pode ser do tipo booleano.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c2->data_type == TYPE_BOOL){
+		fprintf(stderr, "LINHA %d: a expressão da direita não pode ser do tipo booleano.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c1->data_type != c2->data_type){
+		fprintf(stderr, "LINHA %d: as expressão possuem tipos incompatíveis.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+
+	ast->data_nat = NAT_VAL;
+	ast->data_type = c1->data_type;
+}
+void parse_ast_binop_num_to_bool(AstNode* ast){
+	AstNode* c1 = (AstNode*) ast->children[0];
+	AstNode* c2 = (AstNode*) ast->children[1];
+
+	if(c1->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da esquerda deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c2->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da direita deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c1->data_type == TYPE_BOOL){
+		fprintf(stderr, "LINHA %d: a expressão da esquerda não pode ser do tipo booleano.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c2->data_type == TYPE_BOOL){
+		fprintf(stderr, "LINHA %d: a expressão da direita não pode ser do tipo booleano.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c1->data_type != c2->data_type){
+		fprintf(stderr, "LINHA %d: as expressão possuem tipos incompatíveis.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+
+	ast->data_nat = NAT_VAL;
+	ast->data_type = TYPE_BOOL;
+}
+void parse_ast_binop_bool_to_bool(AstNode* ast){
+	AstNode* c1 = (AstNode*) ast->children[0];
+	AstNode* c2 = (AstNode*) ast->children[1];
+
+	if(c1->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da esquerda deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c2->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da direita deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c1->data_type != TYPE_BOOL){
+		fprintf(stderr, "LINHA %d: a expressão da esquerda deve ser ser do tipo booleano.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c2->data_type == TYPE_BOOL){
+		fprintf(stderr, "LINHA %d: a expressão da direita deve ser do tipo booleano.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+
+	ast->data_nat = NAT_VAL;
+	ast->data_type = TYPE_BOOL;
+}
+void parse_AST_CODE(AstNode* ast){
+	HashNode* fun = (HashNode*) ast->children[0];
+	if(fun->nature == 0){
+		fprintf(stderr, "LINHA %d: Função %s não foi declarada.\n",
+			g_line_number,
+			fun->key
+		);
+		g_error_counter++;
+	}
+	if(fun->nature != NAT_FUN){
+		fprintf(stderr, "LINHA %d: identificador %s não foi declarado como função.\n",
+			g_line_number,
+			fun->key
+		);
+		g_error_counter++;
+	}
+	fun->is_implemented = 1;
+}
+void parse_ast_flow(AstNode* ast){
+	AstNode* c1 = (AstNode*) ast->children[0];
+	if(c1->data_type != TYPE_BOOL){
+		fprintf(stderr, "LINHA %d: a expressão deve ser do tipo inteiro.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(c1->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+}
+void parse_AST_ACTION_ASSIGN(AstNode* ast){
+	HashNode* identifier = (HashNode*) ast->children[0];
+	AstNode* exp = (AstNode*) ast->children[1];
+
+	if(identifier->nature != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da esquerda deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(exp->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da direita deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(identifier->type != exp->data_type){
+		fprintf(stderr, "LINHA %d: as expressão possuem tipos incompatíveis.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+}
+void parse_AST_ACTION_ASSIGN_ARRAY(AstNode* ast){
+	HashNode* identifier = (HashNode*) ast->children[0];
+	AstNode* idx = (AstNode*) ast->children[1];
+	AstNode* exp = (AstNode*) ast->children[2];
+
+	if(identifier->nature != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da esquerda deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(idx->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: o índice deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(exp->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão da direita deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(idx->data_type != TYPE_INTE){
+		fprintf(stderr, "LINHA %d: o índice deve do tipo inteiro.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(identifier->type != exp->data_type){
+		fprintf(stderr, "LINHA %d: as expressão possuem tipos incompatíveis.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+}
+void parse_ast_return(AstNode* ast, HashNode* fun){
+	AstNode* exp = (AstNode*) ast->children[0];
+
+	if(exp->data_nat != NAT_VAL){
+		fprintf(stderr, "LINHA %d: a expressão de retorno deve ser um valor.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+	if(fun->type != exp->data_type){
+		fprintf(stderr, "LINHA %d: o tipo de retorno é incompatível com a função.\n",
+			g_line_number
+		);
+		g_error_counter++;
+	}
+}
+
+void parse_tree(AstNode* ast, HashNode* fun){
+	if(ast == NULL) return;
+
+	for(int i = 0; i < AMOUNT(ast->type); i++){
+		if(ISTREE(ast->type, i)){
+			if(ast->type == AST_CODE){
+				parse_tree((AstNode*) ast->children[i], (HashNode*) ast->children[0]);
+			}else{
+				parse_tree((AstNode*) ast->children[i], fun);
 			}
-			// a lista tem menos filhos q declarado
-			if((list->children[1] == NULL) && (i != array_size - 1)){
-				fprintf(stderr, "Lista %s tem menos filhos do que declarado.\n", identifier->key);
-				exit(4);
-			}
-			list = &list->children[1]->branch;
 		}
-		//tem mais literais do que declarados
-		if(list != NULL){
-			fprintf(stderr, "Lista %s tem mais filhos do que declarado.\n", identifier->key);
-			exit(4);
-		}
-	break;
-	case AST_DECLARACAO_FUN: 
-		identifier->type = NAT_FUN | decl_type;
-		list = identifier->param_list = (AstNode*) ast->children[2];
-		while(list != NULL){
-			//o nome do param já foi declarado
-			if(list->children[1]->leaf.type){
-				fprintf(stderr, "Parâmetro %s da função %s já foi declarado neste programa.\n",
-					list->children[1]->leaf.key,
-					identifier->key
-				);
-				exit(4);
-			}
-			list->children[1]->leaf.type = NAT_VAL | ast_type_to_type(list->children[0]->branch.type);
-			//salva o ponteiro para o identificador da lista que está
-			list->children[1]->leaf.param_list = identifier;
-			list = (AstNode*) list->children[2];
-		}
+	}
+	g_line_number = ast->line_number;
 
-	break;
-	default: printf("AST de tipo: %d é inválida!\n", ast->type); exit(5); break;
-	}
-}
-
-void validate_function_args(AstNode* exp_list, AstNode* param_list){
-	HashNode* fn_identifier = (HashNode*) exp_list->children[0];
-	AstNode* exp = (AstNode*) exp_list->children[1];
-	// tipo TK_IDENTIFIER paramListaContinua
-	if(param_list == NULL){
-		//NOTE: do jeito que a linguagem está feita, pode ser declaradas funções sem argumento, mas n pode chamá-las
-		fprintf(stderr, "função %s não tem argumentos declarados.\n", fn_identifier->key);
-		exit(4);
-	}
-	exp_list = (AstNode*) exp_list->children[2];
-	while(param_list != NULL){
-		parse_expression(exp, ast_type_to_type(param_list->children[0]->branch.type), fn_identifier);
-		param_list = (AstNode*) param_list->children[2];
-		if(param_list == NULL && exp_list != NULL){
-			fprintf(stderr, "função %s foi chamada com mais argumentos do que esperado.\n", fn_identifier->key);
-			exit(4);
-		}
-		if(exp_list == NULL){
-			if(param_list == NULL) break;
-			fprintf(stderr, "função %s foi chamada com menos argumentos do que esperado.\n", fn_identifier->key);
-			exit(4);
-		} 
-		exp = (AstNode*) exp_list->children[0];
-		exp_list = (AstNode*) exp_list->children[1];
-	}
-}
-int _parse_expression(AstNode* exp, HashNode* fn_identifier){
-	int left, right;
-	switch (exp->type){
-	case AST_EXP_IDENTIFIER: 
-		if(!exp->children[0]->leaf.type){
-			fprintf(stderr, "identificador %s não foi declarado neste programa.\n", exp->children[0]->leaf.key);
-			exit(4);
-		}
-		if(GET_NAT(((HashNode*)exp->children[0])) != NAT_VAL){
-			fprintf(stderr, "identificador %s não foi declarado como escalar neste programa.\n", exp->children[0]->leaf.key);
-			exit(4);
-		}
-		//TODO: ver se a função atual é a função para qual o identificador foi declarado
-		if(exp->children[0]->leaf.param_list != NULL){
-			if(exp->children[0]->leaf.param_list != fn_identifier){
-				fprintf(stderr, "identificador %s em %s foi declarado para o escopo de %s.\n",
-					exp->children[0]->leaf.key,
-					fn_identifier->key,
-					((HashNode*) exp->children[0]->leaf.param_list)->key
-				);
-				exit(4);
-			}
-		}
-		return GET_TYPE(((HashNode*) exp->children[0]));
-	case AST_EXP_LITERAL:
-		return hash_type_to_type(exp->children[0]->leaf.val);
-	case AST_EXP_ARRAY_ACESS:
-		if(!exp->children[0]->leaf.type){
-			fprintf(stderr, "identificador %s não foi declarado neste programa.\n", exp->children[0]->leaf.key);
-			exit(4);
-		}
-		if(GET_NAT(((HashNode*)exp->children[0])) != NAT_VEC){
-			fprintf(stderr, "identificador %s não foi declarado como vetor neste programa.\n", exp->children[0]->leaf.key);
-			exit(4);
-		}
-		left = _parse_expression((AstNode*) exp->children[1], fn_identifier);
-		if(left != TYPE_INTE){
-			fprintf(stderr, "expressão de acesso ao vetor %s precisa ser do tipo inteiro.\n", exp->children[0]->leaf.key);
-			exit(4);
-		}
-		return GET_TYPE(((HashNode*) exp->children[0]));
-	case AST_EXP_FUN_CALL:
-		if(!exp->children[0]->leaf.type){
-			fprintf(stderr, "identificador %s não foi declarado neste programa.\n", exp->children[0]->leaf.key);
-			exit(4);
-		}
-		if(GET_NAT(((HashNode*)exp->children[0])) != NAT_FUN){
-			fprintf(stderr, "identificador %s não foi declarado como função neste programa.\n", exp->children[0]->leaf.key);
-			exit(4);
-		}
-		validate_function_args(exp, (AstNode*) exp->children[0]->leaf.param_list);
-		return GET_TYPE(((HashNode*) exp->children[0]));
-	case AST_EXP_INPUT:
-		return ast_type_to_type(exp->children[0]->branch.type);
-	case AST_EXP_SUM:
-	case AST_EXP_SUB:
-	case AST_EXP_MUL:
-	case AST_EXP_DIV:
-		left = _parse_expression((AstNode*) exp->children[0], fn_identifier);
-		if(left == -1 || left == TYPE_BOOL) return -1;
-		right = _parse_expression((AstNode*) exp->children[1], fn_identifier);
-		if(right == -1 || left == TYPE_BOOL) return -1;
-		return (left == right) ? left : -1;	
-	case AST_EXP_LESS:
-	case AST_EXP_GREAT:
-	case AST_EXP_LE:
-	case AST_EXP_GE:
-	case AST_EXP_EQ:
-	case AST_EXP_DIF:
-		left = _parse_expression((AstNode*) exp->children[0], fn_identifier);
-		if(left == -1 || left == TYPE_BOOL) return -1;
-		right = _parse_expression((AstNode*) exp->children[1], fn_identifier);
-		if(right == -1 || left == TYPE_BOOL) return -1;
-		return (left == right) ? TYPE_BOOL : -1;
-	case AST_EXP_AND:
-	case AST_EXP_OR:
-		left = _parse_expression((AstNode*) exp->children[0], fn_identifier);
-		right = _parse_expression((AstNode*) exp->children[1], fn_identifier);
-		return ((left == TYPE_BOOL) && (right == TYPE_BOOL)) ? TYPE_BOOL : -1;
-	case AST_EXP_NEG:
-		left = _parse_expression((AstNode*) exp->children[0], fn_identifier);
-		return left == TYPE_BOOL ? TYPE_BOOL : -1;
-	default: 
-		printf("expressão %d >> 7 = %d não identificada\n", exp->type, exp->type >> 7); 
-		exit(5); 
+	#define PARSE(x) case x: parse_ ## x(ast);
+	switch (ast->type){
+		PARSE(AST_DECLARACAO); break;
+		PARSE(AST_DECLARACAO_ARRAY); break;
+		PARSE(AST_DECLARACAO_FUN); break;
+		case AST_PARAM_LISTA:
+		case AST_PARAM_LISTA_CONTINUA:
+			parse_function_parameter_list(ast);
+			break;
+		PARSE(AST_EXP_IDENTIFIER); break;
+		PARSE(AST_EXP_LITERAL); break;
+		PARSE(AST_EXP_ARRAY_ACESS); break;
+		PARSE(AST_EXP_CALL_FUN); break;
+		PARSE(AST_EXP_INPUT); break;
+		PARSE(AST_EXP_NEG); break;
+		case AST_EXP_SUM:
+		case AST_EXP_SUB:
+		case AST_EXP_MUL:
+		case AST_EXP_DIV:
+			parse_ast_binop_num_to_num(ast);
+			break;
+		case AST_EXP_LESS:
+		case AST_EXP_GREAT:
+		case AST_EXP_LE:
+		case AST_EXP_GE:
+		case AST_EXP_EQ:
+		case AST_EXP_DIF:
+			parse_ast_binop_num_to_bool(ast);
+			break;
+		case AST_EXP_AND:
+		case AST_EXP_OR:
+			parse_ast_binop_bool_to_bool(ast);
+			break;
+		case AST_CALL_FUN_PARAM:
+		case AST_CALL_FUN_PARAM_CONTINUA:
+			parse_function_call_list(ast);
+			break;
+		PARSE(AST_CODE); break;
+		case AST_FLOW_WHILE: 
+		case AST_FLOW_IF: 
+		case AST_FLOW_ELSEIF:
+			parse_ast_flow(ast);
+			break; 
+		PARSE(AST_ACTION_ASSIGN); break;
+		PARSE(AST_ACTION_ASSIGN_ARRAY); break;
+		case AST_ACTION_RETURN: 
+			parse_ast_return(ast, fun); 
+			break;
+	default:
 		break;
-	}
-}
-
-void parse_expression(AstNode* exp, int expected_type, HashNode* fn_identifier){
-	int solved_type = _parse_expression(exp, fn_identifier);
-	if(solved_type == -1){
-		fprintf(stderr, "expressão na função %s possui tipo incompatível.\n", fn_identifier->key);
-		exit(4);
-	}
-	if(expected_type == -1) return;
-	if(solved_type != expected_type){
-		fprintf(stderr, "expressão na função %s possui tipo incompatível.\n\tExperava-se tipo %s obteve-se %s\n.",
-			fn_identifier->key, type_to_string(expected_type), type_to_string(solved_type));
-		exit(4);
-	}
-}
-
-void parse_start_cmds(AstNode* start_cmd, HashNode* fn_identifier){
-	switch (start_cmd->type){
-		case AST_START_CMD_BLOCK: parse_cmds((AstNode*) start_cmd->children[0], fn_identifier); break;
-		case AST_START_CMD_ACTION:parse_action((AstNode*) start_cmd->children[0], fn_identifier); break;
-		case AST_START_CMD_FLOW:  parse_flow((AstNode*) start_cmd->children[0], fn_identifier); break;
-		default: exit(5); break;
-	}
-}
-
-void parse_cmds(AstNode* cmd, HashNode* fn_identifier){
-	if(cmd == NULL) return;
-	switch (cmd->type){
-		case AST_CMD_BLOCK: parse_cmds((AstNode*) cmd->children[0], fn_identifier); break;
-		case AST_CMD_ACTION: parse_action((AstNode*) cmd->children[0], fn_identifier); break;
-		case AST_CMD_FLOW: parse_flow((AstNode*) cmd->children[0], fn_identifier); break;
-		default: exit(5); break;
-	}
-	parse_cmds((AstNode*) cmd->children[1], fn_identifier);
-}
-void parse_flow(AstNode* flow, HashNode* fn_identifier){
-	parse_expression((AstNode*) flow->children[0], TYPE_BOOL, fn_identifier);
-	parse_start_cmds((AstNode*) flow->children[1], fn_identifier);
-	if(flow->type ==  AST_FLOW_ELSEIF) {
-		parse_start_cmds((AstNode*) flow->children[2], fn_identifier);
-	}
-}
-void parse_action(AstNode* action, HashNode* fn_identifier){
-	switch (action->type){
-	case AST_ACTION_ASSIGN:
-		if(!action->children[0]->leaf.type){
-			fprintf(stderr, "identificador %s não foi declarado neste programa.\n", action->children[0]->leaf.key);
-			exit(4);
-		}
-		if(GET_NAT(((HashNode*)action->children[0])) != NAT_VAL){
-			fprintf(stderr, "identificador %s não foi declarado como escalar neste programa.\n", action->children[0]->leaf.key);
-			exit(4);
-		}
-		//TODO: ver se a função atual é a função para qual o identificador foi declarado
-		if(action->children[0]->leaf.param_list != NULL){
-			if(action->children[0]->leaf.param_list != fn_identifier){
-				fprintf(stderr, "identificador %s em %s foi declarado para o escopo de %s.\n",
-					action->children[0]->leaf.key,
-					fn_identifier->key,
-					((HashNode*) action->children[0]->leaf.param_list)->key
-				);
-			}
-		}
-		parse_expression((AstNode*) action->children[1], GET_TYPE(((HashNode*) action->children[0])), fn_identifier);
-		break;
-	case AST_ACTION_ASSIGN_ARRAY:
-		if(!action->children[0]->leaf.type){
-			fprintf(stderr, "identificador %s não foi declarado neste programa.\n", action->children[0]->leaf.key);
-			exit(4);
-		}
-		if(GET_NAT(((HashNode*)action->children[0])) != NAT_VEC){
-			fprintf(stderr, "identificador %s não foi declarado como vetor neste programa.\n", action->children[0]->leaf.key);
-			exit(4);
-		}
-		parse_expression((AstNode*) action->children[1], TYPE_INTE, fn_identifier);
-		parse_expression((AstNode*) action->children[2], GET_TYPE(((HashNode*) action->children[0])), fn_identifier);
-		break;
-	case AST_ACTION_RETURN:
-		parse_expression((AstNode*) action->children[0], GET_TYPE(fn_identifier), fn_identifier);
-		break;
-	case AST_ACTION_PRINT_EXP: 
-		//print can be any type as long as it matches
-		parse_expression((AstNode*) action->children[0], -1, fn_identifier);
-		break;
-	case AST_ACTION_PRINT_STRING: break;
-	case AST_SEMICOLON: break;
-	default: exit(5); break;
-	}
-}
-
-void parse_function(AstNode* ast){
-	HashNode* fn_identifier = &ast->children[0]->leaf;
-	AstNode* start_cmd = (AstNode*) ast->children[1];
-	//não foi declarado
-	if(!fn_identifier->type){
-		fprintf(stderr, "identificador %s não foi declarado neste programa.\n", fn_identifier->key);
-		exit(4);
-	}else if(GET_NAT(fn_identifier) != NAT_FUN){
-		fprintf(stderr, "identificador %s não foi declarado como função neste programa.\n", fn_identifier->key);
-		exit(4);
-	}
-	fn_identifier->type |= FUN_IMPLEMENTED;
-	parse_start_cmds(start_cmd, fn_identifier);
-}
-
-void declaration_pass(AstNode* ast){
-	// o primeiro filho de uma arvore n nula são as declarações
-	ast = (AstNode*) ast->children[0]; 
-	//parse da primeira declaração
-	parse_declaration(&ast->children[0]->branch);
-	while(ast->type != AST_DEF){
-		ast = (AstNode*) ast->children[1];
-		parse_declaration(&ast->children[0]->branch);
-	}
-}
-
-void expressions_pass(AstNode* ast){
-	if(ast->children[1] == NULL) return;
-
-	ast = (AstNode*) ast->children[1]; 
-	//parse da primeira declaração
-	parse_function(&ast->children[0]->branch);
-	while(ast->type != AST_FUN){
-		ast = (AstNode*) ast->children[1];
-		parse_function(&ast->children[0]->branch);
 	}
 }
 
 void semantic_pass(){
-	if(g_syntax_tree == NULL) return; 
-	declaration_pass(g_syntax_tree);
-	expressions_pass(g_syntax_tree);
+	parse_tree(g_syntax_tree, NULL);
 	//jeito toscão de fazer
 	HashNode* list;
 	for(int i = 0; i < g_table->size; i++){
 		list = g_table->elems[i]; 
 		while(list != NULL){
-			if(GET_NAT(list) == NAT_FUN && !WAS_IMPLEMENTED(list)){
+			if(list->nature == NAT_FUN && !list->is_implemented){
 				printf("função %s não foi implementada.\n", list->key);
-				exit(4);
+				g_error_counter++;
 			}
 			list = list->next;
 		}
