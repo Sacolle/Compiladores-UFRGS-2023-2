@@ -1,5 +1,5 @@
 #
-# UFRGS - Compiladores B - Marcelo Johann - 2023/2 - Etapa 3
+# UFRGS - Compiladores B - Marcelo Johann - 2023/2 - Etapa 4
 #
 # Nome: Pedro Henrique Boniatti Colle
 # Matrícula: 00333916
