@@ -499,7 +499,7 @@ void parse_AST_ACTION_ASSIGN_ARRAY(AstNode* ast){
 	AstNode* idx = (AstNode*) ast->children[1];
 	AstNode* exp = (AstNode*) ast->children[2];
 
-	if(identifier->nature != NAT_VAL){
+	if(identifier->nature != NAT_VEC){
 		fprintf(stderr, "LINHA %d: a expressão da esquerda deve ser um valor.\n",
 			g_line_number
 		);

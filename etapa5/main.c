@@ -34,6 +34,7 @@ int main(int argc, char** argv){
 	semantic_pass();
 
 	Tac* tac = build_tac(g_syntax_tree);
+	tac = reverse_tac(tac);
 	print_tac(tac);
 	//print_ast(stderr, g_syntax_tree);
 	//print_rebuild_file(stdout, g_syntax_tree);

@@ -27,6 +27,8 @@
 #define TAC_RET 23
 #define TAC_PRINT 24
 #define TAC_READ 25
+#define TAC_SYMBOL_VEC 26
+#define TAC_MOVE_VEC 27
 
 #include "hashtable.h"
 #include "ast.h"
@@ -40,7 +42,6 @@ typedef struct tac_t{
     struct tac_t* next;
     struct tac_t* prev;
 }Tac;
-
 
 
 // os TACs devem
