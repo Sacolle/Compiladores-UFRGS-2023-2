@@ -10,6 +10,7 @@
 #include "semantics.h"
 #include "ast.h"
 #include "tac.h"
+#include "gen_asm.h"
 
 extern FILE *yyin;
 extern HashTable *g_table; //NOTE: g_table é declarada no scanner.l
@@ -33,11 +34,17 @@ int main(int argc, char** argv){
 
 	semantic_pass();
 
-	print_table(g_table);
-	/*
+	//print_table(g_table);
+	
 	Tac* tac = build_tac(g_syntax_tree);
 	tac = reverse_tac(tac);
-	print_tac(tac);*/
+	//print_tac(tac);
+
+	FILE* f = fopen("out.txt", "w");
+	if(!f) { exit(5); }
+
+	generate_asm(f, tac);
+
 	//print_ast(stderr, g_syntax_tree);
 	//print_rebuild_file(stdout, g_syntax_tree);
 
