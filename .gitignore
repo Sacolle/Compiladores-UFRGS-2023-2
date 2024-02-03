@@ -3,6 +3,7 @@
 *.exe
 *.o
 *.txt
+*.s
 .env
 
 # arquivos intermediários gerados pelo yacc e lex
@@ -18,3 +19,7 @@ y.output
 /*/etapa3
 /*/etapa4
 /*/etapa5
+/*/etapa6
+/*/out
+/*/etapa7
+/*/out

@@ -11,6 +11,8 @@
 #define SYMBOL_LIT_INTE 3
 #define SYMBOL_LIT_STRING 4
 #define SYMBOL_IDENTIFIER 7
+#define SYMBOL_TEMP_IDENTIFIER 8
+#define SYMBOL_LABEL 9
 
 // literal or identifier?
 // nature: val, fn, vec

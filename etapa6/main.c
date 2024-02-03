@@ -34,13 +34,15 @@ int main(int argc, char** argv){
 
 	semantic_pass();
 
-	//print_table(g_table);
 	
 	Tac* tac = build_tac(g_syntax_tree);
 	tac = reverse_tac(tac);
-	//print_tac(tac);
+	print_tac(tac);
+	//print_table(g_table);
 
-	FILE* f = fopen("out.txt", "w");
+	//print_table(g_table);
+
+	FILE* f = fopen("out.s", "wb+");
 	if(!f) { exit(5); }
 
 	generate_asm(f, tac);

@@ -39,5 +39,8 @@ echo:
 
 run: ./etapa6
 	./etapa6 $(in)
+
 clean:
-	rm -f *.o lex.yy.c lex.yy.h y.tab.c y.tab.h etapa6 y.output
+	rm -f *.o lex.yy.c lex.yy.h y.tab.c y.tab.h etapa6 out y.output
+
+#gcc -m32 out.s -o out -g

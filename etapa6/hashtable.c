@@ -126,12 +126,12 @@ HashNode* make_temp_symbol(HashTable* t){
 	char* str = (char*) malloc(sizeof(char));
 
 	sprintf(str, "__temp%d", g_serial_num++);
-	return insert_table(t, str, SYMBOL_IDENTIFIER);
+	return insert_table(t, str, SYMBOL_TEMP_IDENTIFIER);
 }
 
 HashNode* make_label(HashTable* t){
 	char* str = (char*) malloc(sizeof(char) * 64);
 	
 	sprintf(str, "__label%d", g_serial_num++);
-	return insert_table(t, str, SYMBOL_IDENTIFIER);
+	return insert_table(t, str, SYMBOL_LABEL);
 }

@@ -76,7 +76,7 @@ void _print_tac(Tac* tac){
     PRINT(TAC_RET); break;
     PRINT(TAC_PRINT); break;
     PRINT(TAC_READ); break;
-    PRINT(TAC_SYMBOL_VEC); break;
+    PRINT(TAC_ACESS_VEC); break;
     PRINT(TAC_MOVE_VEC); break;
     default:
         fprintf(stderr, "TAC não detectada");
@@ -117,7 +117,7 @@ Tac* _build_tac(AstNode* ast){
     case AST_EXP_LITERAL: 
         return make_tac(TAC_SYMBOL, (HashNode*) ast->children[0], NULL, NULL);
     case AST_EXP_ARRAY_ACESS:
-        return concat(tac_children[1], make_tac(TAC_SYMBOL_VEC, (HashNode*) ast->children[0], tac_children[1]->out, NULL));
+        return concat(tac_children[1], make_tac(TAC_ACESS_VEC, NEWSYMBOL, (HashNode*) ast->children[0], tac_children[1]->out));
 
     case AST_EXP_SUM: return make_binop_tac(TAC_ADD, tac_children);
     case AST_EXP_SUB: return make_binop_tac(TAC_SUB, tac_children);
