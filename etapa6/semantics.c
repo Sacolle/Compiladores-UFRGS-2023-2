@@ -428,7 +428,7 @@ void parse_ast_binop_bool_to_bool(AstNode* ast){
 		);
 		g_error_counter++;
 	}
-	if(c2->data_type == TYPE_BOOL){
+	if(c2->data_type != TYPE_BOOL){
 		fprintf(stderr, "LINHA %d: a expressão da direita deve ser do tipo booleano.\n",
 			g_line_number
 		);

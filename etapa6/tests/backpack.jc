@@ -1,0 +1,93 @@
+//https://www.geeksforgeeks.org/0-1-knapsack-problem-dp-10/
+
+/// entrada 1 
+int valor[3] 60 100 120;
+int peso[3] 1 2 3;
+
+int num_de_elementos = 3;
+int width = 0;
+int limite = 5;
+\\\
+
+/// entrada 2 \\\
+int valor[5] 2 5 3 5 2;
+int peso[5] 8 4 4 3 5;
+
+int num_de_elementos = 5;
+int width = 0;
+int limite = 10;
+
+// tabela para o calculo,
+//NOTE: se ocorrer um idx out of bounds, ele acessa as avriáveis i e w
+//ent se entrar em loop é pq o tamanho está pequeno
+int mem[200];
+
+int i = 0;
+int w = 0;
+
+///
+int a = 0;
+int b = 0;
+int idx = 0;
+\\\
+
+int test = 200;
+
+int main();
+int max(int a, int b);
+
+code main {
+	width = limite + 1;
+	//numero de elementos
+	i = 0;
+	while(i <= 3){
+		w = 0;
+		while(w <= limite){
+			if((i == 0) | (w == 0)){
+				mem[(width * i) + w] = 0;
+			}else{
+
+				if(peso[i - 1] <= w){
+
+					// K[i][w] = max(val[i - 1] + K[i - 1][w - wt[i - 1]], K[i - 1][w]);
+
+					///
+					a = valor[i - 1] + mem[(width * (i - 1)) + (w - peso[i - 1])];
+					b = mem[(width * (i - 1)) + w];
+
+					idx = (width * i) + w;
+
+					if(a < b) mem[idx] = b; else mem[idx] = a;
+					\\\							
+					mem[(width * i) + w] = max(
+						valor[i - 1] + mem[(width * (i - 1)) + (w - peso[i - 1])],
+						mem[(width * (i - 1)) + w]
+					);
+				}else{
+					mem[(width * i) + w] = mem[(width * (i - 1)) + w];
+				}
+			}
+			w = w + 1;
+		}
+		i = i + 1;
+	}
+	print "resultado do problema da mochila: ";	
+	print mem[(limite * width) + num_de_elementos];
+	print "\n";
+
+	///
+	while(test >= 0){
+		test = test - 1;
+		print mem[test];
+		print ", ";
+	}\\\
+
+	return 1;
+}
+code max{
+	if(a < b){
+		return b;
+	}else{
+		return a;
+	}
+}

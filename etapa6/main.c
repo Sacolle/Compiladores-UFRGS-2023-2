@@ -37,7 +37,7 @@ int main(int argc, char** argv){
 	
 	Tac* tac = build_tac(g_syntax_tree);
 	tac = reverse_tac(tac);
-	print_tac(tac);
+	//print_tac(tac);
 	//print_table(g_table);
 
 	//print_table(g_table);

@@ -6,6 +6,20 @@
 //TODO: make imediate acess, fix undeclared funcion vars
 
 #define WRITE(...) fprintf(file, __VA_ARGS__)
+
+//symbols na hashtable são 7,8 e 9
+#define WRITE_MAYBE_IMED(node, reg) \
+if (node->val > 6){ \
+	WRITE("mov %s(,1)", node->key); \
+} else { \
+	WRITE("mov $"); \
+	literal_print(file, node); \
+} \
+WRITE(", "); \
+WRITE("%s", reg); \
+NEWLINE
+
+
 #define NEWLINE fprintf(file, "\n")
 
 #include "hashtable.h"
@@ -27,19 +41,11 @@ void make_header(FILE* file){
 		node = g_table->elems[i]; 
 		while(node != NULL){
 			switch(node->val){
-			case SYMBOL_LIT_REAL:
-			case SYMBOL_LIT_INTE:
-				WRITE("_%s:\n\t.long %d\n", node->key, atoi(node->key));
-				break;
-			case SYMBOL_LIT_CARA:
-				//ignora os casos com \n
-				WRITE("_%c:\n\t.long %d\n", node->key[1], node->key[1]);
-				break;
 			case SYMBOL_LIT_STRING:
-				WRITE("xyz%p:\n\t.asciz %s\n", ((void*) node->key), node->key);
+				WRITE("str_%p:\n\t.asciz %s\n", ((void*) node->key), node->key);
 				break;
 			case SYMBOL_TEMP_IDENTIFIER: 
-				WRITE("_%s:\n\t.long 0\n", node->key);
+				WRITE("%s:\n\t.long 0\n", node->key);
 				break;
 			default: break;
 			}
@@ -49,13 +55,10 @@ void make_header(FILE* file){
 	if(g_syntax_tree == NULL) return;
 	
 	AstNode* declarations = (AstNode*) g_syntax_tree->children[0];
-	insert_identifiers(file, (AstNode*) declarations->children[0]);
-	declarations = (AstNode*) declarations->children[1];
-	if(declarations == NULL) return;
-	while(declarations->children[1]){
+	while(declarations != NULL){
 		insert_identifiers(file, (AstNode*) declarations->children[0]);
 		declarations = (AstNode*) declarations->children[1];
-	}
+	};
 }
 
 void literal_print(FILE* file, HashNode* lit){
@@ -71,14 +74,14 @@ void literal_print(FILE* file, HashNode* lit){
 void insert_identifiers(FILE* file, AstNode* def){
 	switch(def->type){
 		case AST_DECLARACAO: 
-				WRITE("_%s:\n\t.long ", def->children[1]->leaf.key);
+				WRITE("%s:\n\t.long ", def->children[1]->leaf.key);
 				literal_print(file, (HashNode*) def->children[2]);
 				NEWLINE;
 			break;
 		case AST_DECLARACAO_ARRAY:
-			WRITE("_%s:\n\t", def->children[1]->leaf.key);
+			WRITE("%s:\n\t", def->children[1]->leaf.key);
 			if(!def->children[3]){
-				WRITE(".zero %s\n", def->children[2]->leaf.key);
+				WRITE(".zero %d\n", atoi(def->children[2]->leaf.key) * 4);
 			}else{
 				def = (AstNode*) def->children[3]; //vai na lista de elementos
 				WRITE(".long ");
@@ -94,20 +97,21 @@ void insert_identifiers(FILE* file, AstNode* def){
 		case AST_DECLARACAO_FUN:
 			def = (AstNode*) def->children[2];
 			while(def){
-				WRITE("_%s:\n\t.long 0\n", def->children[1]->leaf.key);
+				WRITE("%s:\n\t.long 0\n", def->children[1]->leaf.key);
 				def = (AstNode*) def->children[2];
 			}
 			break;
 		default: break;
 	}
 }
-//gcc -m32 arquivo
-
-int g_cmp_label = 0;
 
 void write_math_binop_asm(FILE* file, Tac* op){
-	WRITE("mov _%s(,1), %%eax\n", op->op1->key);
-	WRITE("mov _%s(,1), %%ebx\n", op->op2->key);
+	//TODO: test if immediate here
+	//WRITE("mov _%s(,1), %%eax\n", op->op1->key);
+	//WRITE("mov _%s(,1), %%ebx\n", op->op2->key);
+	WRITE_MAYBE_IMED(op->op1, "%eax");
+	WRITE_MAYBE_IMED(op->op2, "%ebx");
+	
 	switch (op->type){
 	case TAC_ADD: WRITE("add %%ebx, %%eax\n"); break;
 	case TAC_SUB: WRITE("sub %%ebx, %%eax\n"); break;
@@ -120,21 +124,54 @@ void write_math_binop_asm(FILE* file, Tac* op){
 	// https://stackoverflow.com/questions/1406783/how-to-read-and-write-x86-flags-registers-directly
 	// https://en.wikipedia.org/wiki/FLAGS_register
 	case TAC_LESS: 
-		// if CF = 1, save number 1 in eax else eax 0 
+		// if CF = 1 xor if ZF = 1, save number 1 in eax else eax 0 
+		/*
 		WRITE("cmp %%ebx, %%eax\n");
 		WRITE("mov $0, %%eax\n");
 		WRITE("lahf\n");
 		WRITE("and $0x0100, %%eax\n");
 		WRITE("shr $8, %%eax\n");
+		*/
+		WRITE("cmp %%ebx, %%eax\n");
+		WRITE("mov $0, %%eax\n");
+		WRITE("lahf\n");
+		WRITE("mov %%eax, %%ebx\n");
+		//check carry flag
+		WRITE("and $0x0100, %%eax\n");
+		WRITE("shr $8, %%eax\n");
+		//check zero flag
+		WRITE("and $0x4000, %%ebx\n");
+		WRITE("shr $14, %%ebx\n");
+		WRITE("xor $1, %%ebx\n"); //se ZF = 1, set ZF = 0
+		//if any is 1
+		WRITE("and %%ebx, %%eax\n");
+
 		break;
 	case TAC_GREAT: 
-		// if CF = 0, save 1 in eax 
+		// if CF = 0 xor if ZF = 1, save 1 in eax 
+		/*
 		WRITE("cmp %%ebx, %%eax\n");
 		WRITE("mov $0, %%eax\n");
 		WRITE("lahf\n");
 		WRITE("and $0x0100, %%eax\n");
 		WRITE("xor $0x0100, %%eax\n"); //se CF = 0, ent retorna 0x0100
 		WRITE("shr $8, %%eax\n");
+		*/
+		// if CF = 0, save 1 in eax and set ZF = 0
+		WRITE("cmp %%ebx, %%eax\n");
+		WRITE("mov $0, %%eax\n");
+		WRITE("lahf\n");
+		WRITE("mov %%eax, %%ebx\n");
+		//check carry flag
+		WRITE("and $0x0100, %%eax\n");
+		WRITE("xor $0x0100, %%eax\n");
+		WRITE("shr $8, %%eax\n");
+		//check zero flag
+		WRITE("and $0x4000, %%ebx\n");
+		WRITE("shr $14, %%ebx\n");
+		WRITE("xor $1, %%ebx\n"); //se ZF = 1, set ZF = 0
+		//if any is 1
+		WRITE("and %%ebx, %%eax\n");
 		break;
 	case TAC_LE: 
 		// if CF = 1, save 1 in eax, or if ZF = 1
@@ -188,7 +225,7 @@ void write_math_binop_asm(FILE* file, Tac* op){
 	case TAC_OR: WRITE("or %%ebx, %%eax\n"); break;
 	}
 
-	WRITE("mov %%eax, _%s(,1)\n", op->out->key);
+	WRITE("mov %%eax, %s(,1)\n", op->out->key);
 }
 
 
@@ -197,13 +234,13 @@ int assing_to_func_args(FILE* file, AstNode* list){
 	if(list == NULL) return res;
 	res = 1 + assing_to_func_args(file, (AstNode*) list->children[2]);
 	WRITE("pop %%ecx\n");
-	WRITE("mov %%ecx, _%s(,1)\n", list->children[1]->leaf.key);
+	WRITE("mov %%ecx, %s(,1)\n", list->children[1]->leaf.key);
 	return res;
 }	
 
 void generate_asm(FILE* file, Tac* tac_list){
 	make_header(file);	
-	WRITE("__scan_int__:\n\t.string \"%%d\"\n");
+	WRITE("__fmt_int__:\n\t.string \"%%d\"\n");
 
 	WRITE("\n.text\n");
 
@@ -211,18 +248,27 @@ void generate_asm(FILE* file, Tac* tac_list){
 	for(Tac* tac = tac_list; tac; tac = tac->next){
 		switch (tac->type){
 		case TAC_MOVE:
-			WRITE("mov _%s(,1), %%eax\n", tac->op1->key);
-			WRITE("mov %%eax, _%s(,1)\n", tac->out->key);
+			//TODO: could be immediate
+			//WRITE("mov %s(,1), %%eax\n", tac->op1->key);
+			WRITE_MAYBE_IMED(tac->op1, "%eax");
+			
+			WRITE("mov %%eax, %s(,1)\n", tac->out->key);
 			break;
 		case TAC_MOVE_VEC: //coloca o valor para dentro do vetor
-			WRITE("mov _%s(,1), %%eax\n", tac->op2->key);
-			WRITE("mov _%s(,1), %%ebx\n", tac->op1->key);
-			WRITE("mov %%eax, _%s(, %%ebx, 4)\n", tac->out->key); //NOTE: check if 4 or 1
+			//TODO: could be immediate
+			//WRITE("mov %s(,1), %%eax\n", tac->op2->key);
+			WRITE_MAYBE_IMED(tac->op2, "%eax");
+			//TODO: could be immediate
+			//WRITE("mov %s(,1), %%ebx\n", tac->op1->key);
+			WRITE_MAYBE_IMED(tac->op1, "%ebx");
+			WRITE("mov %%eax, %s(, %%ebx, 4)\n", tac->out->key); //NOTE: check if 4 or 1
 			break;
 		case TAC_ACESS_VEC:
-			WRITE("mov _%s(,1), %%ebx\n", tac->op2->key);
-			WRITE("mov _%s(, %%ebx, 4), %%eax\n", tac->op1->key);
-			WRITE("mov %%eax, _%s(,1)\n", tac->out->key);
+			//TODO: could be immediate
+			//WRITE("mov %s(,1), %%ebx\n", tac->op2->key);
+			WRITE_MAYBE_IMED(tac->op2, "%ebx");
+			WRITE("mov %s(, %%ebx, 4), %%eax\n", tac->op1->key);
+			WRITE("mov %%eax, %s(,1)\n", tac->out->key);
 			break;
 		case TAC_ADD:
 		case TAC_SUB:
@@ -239,13 +285,13 @@ void generate_asm(FILE* file, Tac* tac_list){
 			write_math_binop_asm(file, tac);
 			break;
 		case TAC_NEG:
-			WRITE("mov _%s(,1), %%eax\n", tac->op1->key);
+			WRITE("mov %s(,1), %%eax\n", tac->op1->key);
 			WRITE("xor $1, %%eax\n");
-			WRITE("mov %%eax, _%s(,1)\n", tac->out->key);
+			WRITE("mov %%eax, %s(,1)\n", tac->out->key);
 			break;
 		case TAC_LABEL: WRITE("%s:\n", tac->out->key); break;
 		case TAC_IFZ:
-			WRITE("mov _%s(,1), %%eax\n", tac->op1->key);
+			WRITE("mov %s(,1), %%eax\n", tac->op1->key);
 			WRITE("cmp $0, %%eax\n");
 			WRITE("jz %s\n", tac->out->key);
 			break;
@@ -283,7 +329,9 @@ void generate_asm(FILE* file, Tac* tac_list){
 		*/	
 			has_return = 1;
 			if(tac->op1 != NULL){
-				WRITE("mov _%s(,1), %%eax\n", tac->op1->key);
+				//TODO: could be immediate
+				//WRITE("mov %s(,1), %%eax\n", tac->op1->key);
+				WRITE_MAYBE_IMED(tac->op1, "%eax");
 			}else{
 				//caso seja um ENDFUN
 				WRITE("mov $0, %%eax\n");
@@ -305,29 +353,42 @@ void generate_asm(FILE* file, Tac* tac_list){
 			WRITE("/* pops */\n");
 
 			WRITE("call %s\n", tac->op1->key);
-			WRITE("mov %%eax, _%s(,1)\n", tac->out->key);
+			WRITE("mov %%eax, %s(,1)\n", tac->out->key);
 			break;
-		case TAC_ARG: //stack based
-		/*
-			os valores estarão disponíveis na função como %ebp+4, +8, etc
-		*/
-			WRITE("push _%s(,1)\n", tac->out->key);
+		case TAC_ARG: //empilha para depois desempilhar antes de chamar a função
+			//TODO: could be immediate
+
+			if (tac->out->val > 6){ 
+				WRITE("push %s(,1)", tac->out->key); 
+			} else { 
+				WRITE("push $"); 
+				literal_print(file, tac->out); 
+			} 
+			NEWLINE;
 			break;
 		case TAC_PRINT: //printf * ou valor
 			if(tac->out->val == SYMBOL_LIT_STRING){
-				WRITE("push $xyz%p\n", (void*) tac->out->key);
+				WRITE("push $str_%p\n", (void*) tac->out->key);
 				WRITE("call printf\n");
 				WRITE("add $4, %%esp\n");
 			}else{
-				WRITE("push _%s(,1)\n", tac->out->key);
-				WRITE("push $__scan_int__\n");
+				//TODO: could be immediate
+				if (tac->out->val > 6){ 
+					WRITE("push %s(,1)", tac->out->key); 
+				} else { 
+					WRITE("push $"); 
+					literal_print(file, tac->out); 
+				} 
+				NEWLINE;
+
+				WRITE("push $__fmt_int__\n");
 				WRITE("call printf\n");
 				WRITE("add $8, %%esp\n");
 			}
 			break;
 		case TAC_READ: //scanf
-			WRITE("push $_%s\n", tac->out->key); 
-			WRITE("push $__scan_int__\n");
+			WRITE("push $%s\n", tac->out->key); 
+			WRITE("push $__fmt_int__\n");
 			WRITE("call scanf\n");
 			WRITE("add $8, %%esp\n");
 			break;
@@ -335,16 +396,4 @@ void generate_asm(FILE* file, Tac* tac_list){
 			break;
 		}
 	}
-	/* main
-	.globl main
-	main:
-	*/
-
-
-	/* function call
-	.globl area
-	.type area, @function
-	area:
-	*/
-
 }
