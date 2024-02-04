@@ -15,7 +15,7 @@ endif
 FLAGS = -std=c99 -pedantic -Wall -Werror -g
 CC = clang
 
-SRC = lex.yy.c y.tab.c main.c hashtable.c ast.c semantics.c tac.c gen_asm.c
+SRC = lex.yy.c y.tab.c main.c hashtable.c ast.c semantics.c tac.c gen_asm.c btree.c
 
 OBJS = $(patsubst %.c, %.o, $(SRC))
 

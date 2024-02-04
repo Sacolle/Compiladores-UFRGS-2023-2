@@ -5,35 +5,47 @@
 
 //TODO: make imediate acess, fix undeclared funcion vars
 
-#define WRITE(...) fprintf(file, __VA_ARGS__)
 
-//symbols na hashtable são 7,8 e 9
-#define WRITE_MAYBE_IMED(node, reg) \
-if (node->val > 6){ \
-	WRITE("mov %s(,1)", node->key); \
-} else { \
-	WRITE("mov $"); \
-	literal_print(file, node); \
-} \
-WRITE(", "); \
-WRITE("%s", reg); \
-NEWLINE
 
 
 #define NEWLINE fprintf(file, "\n")
 
 #include "hashtable.h"
 #include "semantics.h"
+#include "btree.h"
 
+#define WRITE(...) fprintf(file, __VA_ARGS__)
+#define INST(a, b, c) fprintf(file, "%s %s, %s\n", a, b, c)
+#define INST2(a, b) fprintf(file, "%s %s\n", a, b)
+#define VAR(node) var(alias_tree, node)
 
 //base https://flint.cs.yale.edu/cs421/papers/x86-asm/asm.html
 
 extern HashTable* g_table;
 extern AstNode* g_syntax_tree;
 
-void insert_identifiers(FILE* file, AstNode* def);
+char buff[1024];
+char* var(Btree* tree, HashNode* node){
+	char* alias = NULL;
+	switch(node->val){
+		case SYMBOL_LIT_INTE: sprintf(buff, "$%s", node->key); break;
+		case SYMBOL_LIT_REAL: sprintf(buff, "$%d", (int) atof(node->key)); break;
+		case SYMBOL_LIT_CARA: sprintf(buff, "$%d", node->key[1]); break;
+		default:
+			alias = btree_get(tree, node->key); 
+			if(alias == NULL)
+				sprintf(buff, "%s(,1)", node->key); 
+			else
+				sprintf(buff, "%s", alias); 
+			break;
+	}
+	return buff;
+}
 
-void make_header(FILE* file){
+
+void insert_identifiers(FILE* file, AstNode* def, Btree* alias_tree);
+
+void make_header(FILE* file, Btree* alias_tree){
 	WRITE(".data\n");
 	//faz os literais
 	HashNode* node;
@@ -56,7 +68,7 @@ void make_header(FILE* file){
 	
 	AstNode* declarations = (AstNode*) g_syntax_tree->children[0];
 	while(declarations != NULL){
-		insert_identifiers(file, (AstNode*) declarations->children[0]);
+		insert_identifiers(file, (AstNode*) declarations->children[0], alias_tree);
 		declarations = (AstNode*) declarations->children[1];
 	};
 }
@@ -70,8 +82,18 @@ void literal_print(FILE* file, HashNode* lit){
 	}
 }
 
+int make_fun_arg_alias(Btree* alias_tree, AstNode* list){
+	int res = 0;
+	if(list == NULL) return res;
+	res = 1 + make_fun_arg_alias(alias_tree, (AstNode*) list->children[2]);
+	
+	char* buff = (char*) malloc(sizeof(char) * 10);
+	sprintf(buff, "+%d(%%ebp)", 4 + 4 * res);
+	btree_insert(alias_tree, list->children[1]->leaf.key, buff);
+	return res;
+}	
 
-void insert_identifiers(FILE* file, AstNode* def){
+void insert_identifiers(FILE* file, AstNode* def, Btree* alias_tree){
 	switch(def->type){
 		case AST_DECLARACAO: 
 				WRITE("%s:\n\t.long ", def->children[1]->leaf.key);
@@ -96,21 +118,18 @@ void insert_identifiers(FILE* file, AstNode* def){
 			break;
 		case AST_DECLARACAO_FUN:
 			def = (AstNode*) def->children[2];
-			while(def){
-				WRITE("%s:\n\t.long 0\n", def->children[1]->leaf.key);
-				def = (AstNode*) def->children[2];
-			}
+			make_fun_arg_alias(alias_tree, def);
 			break;
 		default: break;
 	}
 }
 
-void write_math_binop_asm(FILE* file, Tac* op){
+void write_math_binop_asm(FILE* file, Btree* alias_tree, Tac* op){
 	//TODO: test if immediate here
 	//WRITE("mov _%s(,1), %%eax\n", op->op1->key);
 	//WRITE("mov _%s(,1), %%ebx\n", op->op2->key);
-	WRITE_MAYBE_IMED(op->op1, "%eax");
-	WRITE_MAYBE_IMED(op->op2, "%ebx");
+	INST("mov", VAR(op->op1), "%eax");
+	INST("mov", VAR(op->op2), "%ebx");
 	
 	switch (op->type){
 	case TAC_ADD: WRITE("add %%ebx, %%eax\n"); break;
@@ -225,24 +244,23 @@ void write_math_binop_asm(FILE* file, Tac* op){
 	case TAC_OR: WRITE("or %%ebx, %%eax\n"); break;
 	}
 
-	WRITE("mov %%eax, %s(,1)\n", op->out->key);
+	INST("mov", "%eax", VAR(op->out));
+}
+int num_of_args(AstNode *list){
+	if(list == NULL) return 0;
+	return 1 + num_of_args((AstNode*) list->children[2]);
 }
 
 
-int assing_to_func_args(FILE* file, AstNode* list){
-	int res = 0;
-	if(list == NULL) return res;
-	res = 1 + assing_to_func_args(file, (AstNode*) list->children[2]);
-	WRITE("pop %%ecx\n");
-	WRITE("mov %%ecx, %s(,1)\n", list->children[1]->leaf.key);
-	return res;
-}	
-
 void generate_asm(FILE* file, Tac* tac_list){
-	make_header(file);	
+	Btree* alias_tree = btree_create("mmmmmm", "default");
+
+	make_header(file, alias_tree);	
 	WRITE("__fmt_int__:\n\t.string \"%%d\"\n");
 
 	WRITE("\n.text\n");
+
+	//btree_print(alias_tree);
 
 	int has_return = 0;
 	for(Tac* tac = tac_list; tac; tac = tac->next){
@@ -250,25 +268,19 @@ void generate_asm(FILE* file, Tac* tac_list){
 		case TAC_MOVE:
 			//TODO: could be immediate
 			//WRITE("mov %s(,1), %%eax\n", tac->op1->key);
-			WRITE_MAYBE_IMED(tac->op1, "%eax");
-			
-			WRITE("mov %%eax, %s(,1)\n", tac->out->key);
+			INST("mov", VAR(tac->op1), "%eax");
+			INST("mov", "%eax", VAR(tac->out));
 			break;
 		case TAC_MOVE_VEC: //coloca o valor para dentro do vetor
-			//TODO: could be immediate
-			//WRITE("mov %s(,1), %%eax\n", tac->op2->key);
-			WRITE_MAYBE_IMED(tac->op2, "%eax");
-			//TODO: could be immediate
-			//WRITE("mov %s(,1), %%ebx\n", tac->op1->key);
-			WRITE_MAYBE_IMED(tac->op1, "%ebx");
-			WRITE("mov %%eax, %s(, %%ebx, 4)\n", tac->out->key); //NOTE: check if 4 or 1
+			INST("mov", VAR(tac->op2), "%eax");
+			INST("mov", VAR(tac->op1), "%eax");
+			//args cannot be vec, so no need to check for alias
+			WRITE("mov %%eax, %s(, %%ebx, 4)\n", tac->out->key);
 			break;
 		case TAC_ACESS_VEC:
-			//TODO: could be immediate
-			//WRITE("mov %s(,1), %%ebx\n", tac->op2->key);
-			WRITE_MAYBE_IMED(tac->op2, "%ebx");
+			INST("mov", VAR(tac->op2), "%ebx");
 			WRITE("mov %s(, %%ebx, 4), %%eax\n", tac->op1->key);
-			WRITE("mov %%eax, %s(,1)\n", tac->out->key);
+			INST("mov", "%eax", VAR(tac->out));
 			break;
 		case TAC_ADD:
 		case TAC_SUB:
@@ -282,16 +294,16 @@ void generate_asm(FILE* file, Tac* tac_list){
 		case TAC_DIF:
 		case TAC_AND:
 		case TAC_OR:
-			write_math_binop_asm(file, tac);
+			write_math_binop_asm(file, alias_tree, tac);
 			break;
 		case TAC_NEG:
-			WRITE("mov %s(,1), %%eax\n", tac->op1->key);
+			INST("mov", VAR(tac->op1), "%eax");
 			WRITE("xor $1, %%eax\n");
-			WRITE("mov %%eax, %s(,1)\n", tac->out->key);
+			INST("mov", "%eax", VAR(tac->out));
 			break;
 		case TAC_LABEL: WRITE("%s:\n", tac->out->key); break;
 		case TAC_IFZ:
-			WRITE("mov %s(,1), %%eax\n", tac->op1->key);
+			INST("mov", VAR(tac->op1), "%eax");
 			WRITE("cmp $0, %%eax\n");
 			WRITE("jz %s\n", tac->out->key);
 			break;
@@ -331,7 +343,7 @@ void generate_asm(FILE* file, Tac* tac_list){
 			if(tac->op1 != NULL){
 				//TODO: could be immediate
 				//WRITE("mov %s(,1), %%eax\n", tac->op1->key);
-				WRITE_MAYBE_IMED(tac->op1, "%eax");
+				INST("mov", VAR(tac->op1), "%eax");
 			}else{
 				//caso seja um ENDFUN
 				WRITE("mov $0, %%eax\n");
@@ -348,23 +360,13 @@ void generate_asm(FILE* file, Tac* tac_list){
 			save registers eax, ecx, edx
 			push the params (ordem inversa)
 			depois da call deve-se somar ao esp 4 * o número de parâmetros usados
-		*/	WRITE("\n/* pops */\n");
-			assing_to_func_args(file, tac->op1->param_list);
-			WRITE("/* pops */\n");
-
+		*/	
 			WRITE("call %s\n", tac->op1->key);
-			WRITE("mov %%eax, %s(,1)\n", tac->out->key);
+			WRITE("add $%d, %%esp\n", 4 * num_of_args(tac->op1->param_list));
+			INST("mov", "%eax", VAR(tac->out));
 			break;
 		case TAC_ARG: //empilha para depois desempilhar antes de chamar a função
-			//TODO: could be immediate
-
-			if (tac->out->val > 6){ 
-				WRITE("push %s(,1)", tac->out->key); 
-			} else { 
-				WRITE("push $"); 
-				literal_print(file, tac->out); 
-			} 
-			NEWLINE;
+			INST2("push", VAR(tac->out));
 			break;
 		case TAC_PRINT: //printf * ou valor
 			if(tac->out->val == SYMBOL_LIT_STRING){
@@ -373,13 +375,7 @@ void generate_asm(FILE* file, Tac* tac_list){
 				WRITE("add $4, %%esp\n");
 			}else{
 				//TODO: could be immediate
-				if (tac->out->val > 6){ 
-					WRITE("push %s(,1)", tac->out->key); 
-				} else { 
-					WRITE("push $"); 
-					literal_print(file, tac->out); 
-				} 
-				NEWLINE;
+				INST2("push", VAR(tac->out));
 
 				WRITE("push $__fmt_int__\n");
 				WRITE("call printf\n");

@@ -20,7 +20,7 @@
 
 - ### laços
 	- [x] while
-	- [ ] funções recursivas
+	- [x] funções recursivas
 
 - ### acesso de vetor
 	- [x] assign
