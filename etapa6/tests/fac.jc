@@ -1,0 +1,15 @@
+int inp = 0;
+
+int main();
+int fac(int a);
+
+code main{
+	inp = input(int);
+	print fac(inp);
+	print "\n";
+}
+
+code fac{
+	if(a == 1) return 1;
+	return a * fac(a - 1);
+}

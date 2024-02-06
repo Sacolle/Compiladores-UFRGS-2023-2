@@ -1,24 +1,12 @@
 echo iniciando testes
 
-cd ..
+cd ~/compiladores/etapa6
 
-# echo 
-# echo teste dos condicionais
-# make run in=tests/cond.jc && gcc -m32 -o out out.s -g 2> /dev/null && ./out
-
-# echo 
-# echo teste dos whiles
-# make run in=tests/whiles.jc && gcc -m32 -o out out.s -g 2> /dev/null && ./out
-
-
-# echo 
-# echo teste da matemática
-# make run in=tests/math.jc && gcc -m32 -o out out.s -g 2> /dev/null && ./out
-
-# echo
-# echo teste de laços
-# make run in=tests/factorial.jc && gcc -m32 -o out out.s -g 2> /dev/null && ./out
-
-echo
-echo teste de recursão
-make run in=tests/rec.jc && gcc -m32 -o out out.s -g 2> /dev/null && ./out
+for f in $(ls tests/*.jc) 
+do
+	echo "testando $f"
+	make run in=$f || (echo "erro buildando $f" && echo && continue)
+	gcc -m32 -o out out.s -g 2> /dev/null || (echo "erro compilando $f" && continue)
+	./out
+	echo
+done
