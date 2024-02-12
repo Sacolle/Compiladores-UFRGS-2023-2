@@ -1,0 +1,26 @@
+
+char in=0;
+char i=0;
+
+int main();
+
+code main {
+	print "digite um numero para fazer o fatorial\n";
+
+	in = input(int);
+	i = in - 1;
+
+	print "o fatorial de ";
+	print in;
+	print " eh ";
+
+	while(i > 0){
+		in = in * i;
+		i = i - 1;
+	}
+
+	print in;
+	print "\n";
+
+	return 1;
+}

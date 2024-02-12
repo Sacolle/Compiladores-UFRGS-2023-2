@@ -1,0 +1,22 @@
+int i = 0;
+int w = 0;
+int limite = 3;
+
+int v[4] 1 2 3 4;
+
+int main();
+
+code main {
+	i = 0;
+	while(i <= 3){
+		if(i == 0){
+			print "i == 0\n";
+		}
+		print "i == ";
+		print i;
+		print "\n";
+		i = i + 1;
+	}
+
+	return 1;
+}

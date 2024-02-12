@@ -1,0 +1,75 @@
+// UFRGS - Compiladores - Marcelo Johann - 2023/2
+
+char a=3;
+char b=2;
+char c=3;
+
+int main();
+
+code main {
+	if(c >= a){
+		print "c >= a\n";
+	}else{
+		print "errado c >= a\n";
+	}
+
+	if(a <= c){
+		print "a <= c\n";
+	}else{
+		print "errado a <= c\n";
+	}
+
+	if(c <= b){
+		print "errado c <= b\n";
+	}else{
+		print "c <= b\n";
+	}
+
+	if(a == c){
+		print "a == c\n";
+	}else{
+		print "errado a == c\n";
+	}
+
+	if(a < c){
+		print "errado a < c\n";
+	}else{
+		print "a !< c\n";
+	}
+
+	if(b < c){
+		print "b < c\n";
+	}else{
+		print "errado b < c\n";
+	}
+
+	if(b > c){
+		print "errado b > c\n";
+	}else{
+		print "b > c\n";
+	}
+
+	if(a > c){
+		print "errado a > c\n";
+	}else{
+		print "a > c\n";
+	}
+
+	if(c < a){
+		print "errado c < a\n";
+	}else{
+		print "c < a\n";
+	}
+
+	if(b != c){
+		print "b != c\n";
+	}else{
+		print "errado b != c\n";
+	}
+
+	if(((b != c) | (a < b)) & ~(a != c)){
+		print "ok\n";
+	}
+
+	return 1;
+}
