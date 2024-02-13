@@ -20,6 +20,7 @@ extern AstNode *g_syntax_tree;
 extern void initGlobalHashTable(void);
 extern int yyparse(void);
 extern int g_error_counter;
+extern int lexical_errors;
 
 int main(int argc, char** argv){
 	if (argc < 2){
@@ -33,6 +34,10 @@ int main(int argc, char** argv){
 	//inicializando a hashtable blobal
 	initGlobalHashTable();
 	yyparse();
+	if(lexical_errors){
+		fprintf(stderr, "Finalizando o programa, %d erros semânticos encontrados.", lexical_errors);
+		exit(5);
+	}
 
 	semantic_pass();
 
