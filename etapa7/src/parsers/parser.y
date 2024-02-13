@@ -20,7 +20,7 @@
 	AstNode* g_syntax_tree;
 	int lexical_errors = 0;
 
-	#define ERR(...) fprintf(stderr, "\tlinha %d: ", getLineNumber()); fprintf(stderr, __VA_ARGS__); lexical_errors++
+	#define ERR(...) fprintf(stderr, "  %d: ", getLineNumber()); fprintf(stderr, __VA_ARGS__); lexical_errors++
 %}
 
 %union{
@@ -86,6 +86,7 @@ inicio: def		{ g_syntax_tree = TNODE(AST_INICIO, $1); }
 
 def: declaracao      { $$ = TNODE(AST_DEF, $1); }
 	| declaracao def { $$ = TNODE(AST_DEF_AND, $1, $2); }
+	| error def 	 { $$ = NULL; ERR("erro na escrita do corpo da função.\n"); }
 	;
 
 fun: code 		{ $$ = TNODE(AST_FUN, $1); }
@@ -95,13 +96,11 @@ fun: code 		{ $$ = TNODE(AST_FUN, $1); }
 tipo: KW_INT 	{ $$ = TTEND(AST_KW_INT); }
 	| KW_CHAR   { $$ = TTEND(AST_KW_CHAR); }
 	| KW_FLOAT 	{ $$ = TTEND(AST_KW_FLOAT); }
-	| error 	{ $$ = NULL; ERR("Token de tipo não identificado.\n"); }
 	;
 
 literal: LIT_INT { $$ = $1; }
 	| LIT_CHAR 	 { $$ = $1; }
 	| LIT_REAL   { $$ = $1; }
-	| error 	 { $$ = NULL; ERR("Token de literal não identificado.\n"); }
 	;
 
 declaracao: tipo TK_IDENTIFIER '=' literal ';'          { $$ = TNODE(AST_DECLARACAO, $1, $2, $4); }
@@ -111,31 +110,30 @@ declaracao: tipo TK_IDENTIFIER '=' literal ';'          { $$ = TNODE(AST_DECLARA
 	| tipo TK_IDENTIFIER '(' error ')' ';'         		{ $$ = NULL; ERR("param decl\n"); }
 	| tipo TK_IDENTIFIER '[' LIT_INT ']' error ';' 		{ $$ = NULL; ERR("vec decl\n"); }
 	| tipo TK_IDENTIFIER error ';' 						{ $$ = NULL; ERR("Erro na declaração. Faltando assinalação a um literal.\n"); }
-	| tipo TK_IDENTIFIER '=' literal 				    { $$ = NULL; ERR("Erro na declaração. Faltando ; na linha anterior.\n"); }
+	| tipo TK_IDENTIFIER '=' literal error				{ $$ = NULL; ERR("Erro na declaração. Faltando ; na linha anterior.\n"); }
 	;
 
 valorLista: literal valorLista { $$ = TNODE(AST_VALOR_LISTA, $1, $2); }
+	| error valorLista 		   { $$ = NULL; ERR("Erro na declaração da lista de literais.\n"); }
 	|						   { $$ = NULL; }
 	;
 
 paramLista: tipo TK_IDENTIFIER paramListaContinua { $$ = TNODE(AST_PARAM_LISTA, $1, $2, $3); }
-	| error paramListaContinua 				      { $$ = NULL; ERR("param error 1.\n"); }
+	| error paramListaContinua 				      { $$ = NULL; ERR("Erro na declaração dos parâmetros da função.\n"); }
 	|						   					  { $$ = NULL; }
 	;
 
 paramListaContinua: ',' tipo TK_IDENTIFIER paramListaContinua { $$ = TNODE(AST_PARAM_LISTA_CONTINUA, $2, $3, $4); }
-	| ',' error paramListaContinua 				    		  { $$ = NULL; ERR("param error 2.\n"); }
+	| ',' error paramListaContinua 				    		  { $$ = NULL; ERR("Erro na declaração dos parâmetros da função.\n"); }
 	|														  { $$ = NULL; }
 	;
 
-exp : TK_IDENTIFIER                      { $$ = TNODE(AST_EXP_IDENTIFIER, $1); }                      
+exp : TK_IDENTIFIER                      { $$ = TNODE(AST_EXP_IDENTIFIER, $1); } 
     | literal                            { $$ = TNODE(AST_EXP_LITERAL, $1); }
     | TK_IDENTIFIER '[' exp ']'          { $$ = TNODE(AST_EXP_ARRAY_ACESS, $1, $3); }
-    | TK_IDENTIFIER '[' error ']'        { $$ = NULL; ERR("Erro na expressão de indexação do vetor.\n");}
     | TK_IDENTIFIER '(' callFunParam ')' { $$ = TNODE(AST_EXP_CALL_FUN, $1, $3); }
     | KW_INPUT '(' tipo ')'              { $$ = TNODE(AST_EXP_INPUT, $3); }
 	| '(' exp ')'                        { $$ = $2; }
-	| '(' error ')'                      { $$ = NULL; ERR("Erro na expressão entre parênteses.\n"); }
     | '~' exp                            { $$ = TNODE(AST_EXP_NEG, $2); }
     | exp '+' exp                        { $$ = TNODE(AST_EXP_SUM, $1, $3); }
     | exp '-' exp                        { $$ = TNODE(AST_EXP_SUB, $1, $3); }
@@ -157,11 +155,13 @@ callFunParam: exp callFunParamContinua  { $$ = TNODE(AST_CALL_FUN_PARAM, $1, $2)
 	;
 
 callFunParamContinua: ',' exp callFunParamContinua { $$ = TNODE(AST_CALL_FUN_PARAM_CONTINUA, $2, $3); }
-	| error callFunParamContinua				   { $$ = NULL; ERR("Erro no parâmetro da chamada da função.\n");}
+	| ',' error callFunParamContinua			   { $$ = NULL; ERR("Erro no parâmetro da chamada da função.\n");}
 	|						                       { $$ = NULL; }
 	;
 
-code: KW_CODE TK_IDENTIFIER startCmd  { $$ = TNODE(AST_CODE, $2, $3); };
+code: KW_CODE TK_IDENTIFIER startCmd  { $$ = TNODE(AST_CODE, $2, $3); }
+	| TK_IDENTIFIER error startCmd 	  { $$ = NULL; ERR("erro na declaração de função.\n"); }
+	;
 
 startCmd: '{' cmd '}'  { $$ = TNODE(AST_START_CMD_BLOCK, $2); }
     | action           { $$ = TNODE(AST_START_CMD_ACTION, $1); }
@@ -177,9 +177,9 @@ cmd: '{' cmd '}' cmd   { $$ = TNODE(AST_CMD_BLOCK, $2, $4); }
 flow: KW_WHILE '(' exp ')' startCmd                 { $$ = TNODE(AST_FLOW_WHILE, $3, $5); }
 	| KW_IF '(' exp ')' startCmd                    { $$ = TNODE(AST_FLOW_IF, $3, $5); }
 	| KW_IF '(' exp ')' startCmd KW_ELSE startCmd   { $$ = TNODE(AST_FLOW_ELSEIF, $3, $5, $7); }
-	| KW_WHILE '(' error ')' startCmd               { $$ = NULL; }
-	| KW_IF '(' error ')' startCmd                  { $$ = NULL; }
-	| KW_IF '(' error ')' startCmd KW_ELSE startCmd { $$ = NULL; }
+	| KW_WHILE  error startCmd                      { $$ = NULL; ERR("Erro na expressão while.\n"); }
+	| KW_IF error startCmd                          { $$ = NULL; ERR("Erro na expressão if.\n"); }
+	| KW_IF error startCmd KW_ELSE startCmd         { $$ = NULL; ERR("Erro na expressão elseif.\n"); }
 	;
 
 action: TK_IDENTIFIER '=' exp ';'            { $$ = TNODE(AST_ACTION_ASSIGN, $1, $3); } 
@@ -188,18 +188,15 @@ action: TK_IDENTIFIER '=' exp ';'            { $$ = TNODE(AST_ACTION_ASSIGN, $1,
     | KW_PRINT exp ';'                       { $$ = TNODE(AST_ACTION_PRINT_EXP, $2); }
     | KW_PRINT LIT_STRING ';'                { $$ = TNODE(AST_ACTION_PRINT_STRING, $2); }
     | ';'                                    { $$ = TTEND(AST_SEMICOLON); }            
-	| TK_IDENTIFIER error            		 { $$ = NULL; }
-    | KW_RETURN error                        { $$ = NULL; }
-    | KW_PRINT error                         { $$ = NULL; }
+	| TK_IDENTIFIER '=' error ';'            { $$ = NULL; ERR("Erro na expressão de assinalamento.\n"); }
+	| TK_IDENTIFIER '[' error ';'            { $$ = NULL; ERR("Erro na expressão de assinalamento de vetor.\n"); }
+    | KW_RETURN error ';'                    { $$ = NULL; ERR("Erro na expressão return.\n"); }
+    | KW_PRINT error ';'                     { $$ = NULL; ERR("Erro na expressão print.\n"); }
 	;
 
 %%
 
 int yyerror(char* err){
-	fprintf(stderr, "%s\n", err);
-	if(lexical_errors >= 20){
-		fprintf(stderr, "Teto de 20 erros léxicos atingidos, abortando a compilação!\n");
-		exit(5);
-	}
+	fprintf(stderr, "linha %d: %s\n", getLineNumber(), err);
 	return 0;
 }
