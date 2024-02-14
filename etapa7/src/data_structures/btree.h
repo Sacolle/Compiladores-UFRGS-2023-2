@@ -15,7 +15,7 @@ typedef struct btree_lifetime_t {
 	struct btree_lifetime_node_t* root; 
 } LtMap;
 
-LtMap* ltmap_create();
+LtMap* ltmap_create(void);
 void ltmap_insert(LtMap* map, char* key, int first_use, int last_use);
 //int ltmap_has(LtMap* map, char* key);
 LtMapNode* ltmap_get(LtMap* map, char* key);

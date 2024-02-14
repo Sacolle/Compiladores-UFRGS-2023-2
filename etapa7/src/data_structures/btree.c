@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdio.h>
 
-LtMap* ltmap_create(){
+LtMap* ltmap_create(void){
 	LtMap* map = (LtMap*) malloc(sizeof(LtMap));
 	map->root = NULL;
 	return map;
