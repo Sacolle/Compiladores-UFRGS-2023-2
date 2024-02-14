@@ -27,6 +27,7 @@ typedef struct hash_node{
 	char is_implemented;
 	void* param_list;	//pointer para a AST
 	int num_of_local_var;
+	int inlinable;
 	struct hash_node* next;
 } HashNode;
  

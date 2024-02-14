@@ -40,6 +40,7 @@ HashNode* _new_hashnode(char* key, int val){
 	node->nature = 0;
 	node->is_implemented = 0;
 	node->num_of_local_var = 0;
+	node->inlinable = 1;
 	node->param_list = NULL;
 
 	return node;

@@ -78,6 +78,8 @@ void _print_tac(Tac* tac){
     PRINT(TAC_READ); break;
     PRINT(TAC_ACESS_VEC); break;
     PRINT(TAC_MOVE_VEC); break;
+    PRINT(TAC_BEGIN_WHILE); break;
+    PRINT(TAC_END_WHILE); break;
     default:
         fprintf(stderr, "TAC não detectada");
         break;
@@ -155,14 +157,21 @@ Tac* _build_tac(AstNode* ast){
 		zjump_label = NEWLABEL;
 		jump_label = NEWLABEL;
 		return concat(
-			make_tac(TAC_LABEL, jump_label, NULL, NULL),
-			concat(tac_children[0], 
-				concat(make_tac(TAC_IFZ, zjump_label, tac_children[0]->out, NULL),
-					concat(tac_children[1], 
-						concat(
-							make_tac(TAC_JUMP, jump_label, NULL, NULL),
-							make_tac(TAC_LABEL, zjump_label, NULL, NULL))
+			make_tac(TAC_BEGIN_WHILE, jump_label, NULL, NULL), 
+			concat(
+				make_tac(TAC_LABEL, jump_label, NULL, NULL),
+				concat(tac_children[0], 
+					concat(make_tac(TAC_IFZ, zjump_label, tac_children[0]->out, NULL),
+						concat(tac_children[1], 
+							concat(
+								make_tac(TAC_JUMP, jump_label, NULL, NULL),
+								concat(
+									make_tac(TAC_LABEL, zjump_label, NULL, NULL),
+									make_tac(TAC_END_WHILE, jump_label, NULL, NULL)
+								)
+							)
 						)
+					)
 				)
 			)
 		);
@@ -212,7 +221,7 @@ Tac* _build_tac(AstNode* ast){
     case AST_ACTION_RETURN: 
 		return concat(
 			tac_children[0],
-			make_tac(TAC_RET, NEWSYMBOL, tac_children[0]->out, NULL)
+			make_tac(TAC_RET, tac_children[0]->out, NULL, NULL)
 		);
     case AST_ACTION_PRINT_EXP: 
 		return concat(

@@ -30,6 +30,10 @@
 #define TAC_ACESS_VEC 26
 #define TAC_MOVE_VEC 27
 
+//new tacs
+#define TAC_BEGIN_WHILE 50
+#define TAC_END_WHILE 51
+
 #include "hashtable.h"
 #include "ast.h"
 

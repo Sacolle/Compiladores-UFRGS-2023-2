@@ -251,7 +251,8 @@ int num_of_args(AstNode *list){
 	if(list == NULL) return 0;
 	return 1 + num_of_args((AstNode*) list->children[2]);
 }
-
+//Analisa todos os tacs dentro de uma função e checa o tempo de vida das variaveis __temp
+//com isso, realiza um alias para elas serem usadas no stack baseado no tempo de vida da variável
 Tac* parse_function(Tac* tac, Btree* alias_tree){
 	if(tac->type != TAC_BEGINFUN) return tac;
 	HashNode* function_node = tac->out;
@@ -292,6 +293,13 @@ Tac* parse_function(Tac* tac, Btree* alias_tree){
 				node->last_use = instant;
 			}
 		}
+		//extra anotation for inlining latter
+		//checks if a function calls other functions
+		//or if it has any jumps
+		if(tac->type == TAC_CALL || tac->type == TAC_LABEL){
+			function_node->inlinable = 0;
+		}
+
 		instant++;
 		PANICIF(instant > 127, "size of ocurrences buffer exceded\n");
 		tac = tac->next;
@@ -340,7 +348,62 @@ void parse_functions(Tac* tac_list, Btree* alias_tree){
 	}
 }
 
+void tac_mov_elimination(Tac* tac_list){
+	Tac* tac = tac_list;
+	Tac* to_free_tac = NULL;
+	while(tac != NULL){
+		if(tac->type == TAC_MOVE && tac->op1 == tac->prev->out){
+			tac->prev->out = tac->out;
+
+			tac->prev->next = tac->next;
+			tac->next->prev = tac->prev;
+			to_free_tac = tac;
+			tac = tac->next;
+			free(to_free_tac);
+		}else{
+			tac = tac->next;
+		}
+	}
+}
+/*
+Tac* tac_find_funtion(Tac* tac_list, HashNode* name){
+	for(Tac* tac = tac_list; tac; tac = tac->next){
+		if(tac->type == TAC_BEGINFUN && tac->out == name) return tac;
+	}
+}
+HashNode* get_nth_arg(int n, AstNode* list){
+	if(n == 0) return (HashNode*) list->children[2];
+	return get_nth_arg(n - 1, (HashNode*) list->children[2]);
+}
+/
+void tac_inline_functions(Tac* tac_list){
+	Tac* tac = tac_list;
+	Tac* find_arg = tac_list;
+	while(tac != NULL){
+		if(tac->type == TAC_CALL && tac->op1->inlinable){
+			//get the num args before
+			//change them to mov to the arg
+			for(int n = num_of_args((AstNode*) tac->op1->param_list); n > 0; n--){
+				find_arg = tac->prev;	
+				while(find_arg->type != TAC_ARG) find_arg->prev;
+				//change to mov
+				find_arg->type = TAC_MOVE;
+				find_arg->op1 = find_arg->out;
+				find_arg->out = get_nth_arg(n - 1, (AstNode*) tac->op1->param_list);
+			}
+			//change call to the body of the function
+			//the return becomes, mov __temp(from teh tac_call), __temp(from the ret)
+		}
+		tac = tac->next;
+	}
+}*/
+
 void generate_asm(FILE* file, Tac* tac_list){
+	//print_tac(tac_list);
+	//fprintf(stderr, "\nEliminando MOVS desnecessários.\n\n");
+	tac_mov_elimination(tac_list);
+	print_tac(tac_list);
+
 	Btree* alias_tree = btree_create("mmmmmm", "default");
 
 	parse_functions(tac_list, alias_tree);
@@ -433,10 +496,10 @@ void generate_asm(FILE* file, Tac* tac_list){
 			pop %ebp do stack
 		*/	
 			has_return = 1;
-			if(tac->op1 != NULL){
+			if(tac->type == TAC_RET){
 				//TODO: could be immediate
 				//WRITE("mov %s(,1), %%eax\n", tac->op1->key);
-				INST("mov", VAR(tac->op1), "%eax");
+				INST("mov", VAR(tac->out), "%eax");
 			}else{
 				//caso seja um ENDFUN
 				WRITE("mov $0, %%eax\n");
