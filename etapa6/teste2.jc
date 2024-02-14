@@ -1,0 +1,18 @@
+// UFRGS - Compiladores - Marcelo Johann - 2023/2
+
+int i = 0;
+int j = 0;
+
+int main();
+
+code main {
+	i = 0;
+	while(i < 100000){
+		j = 0;
+		while(j < 100000){
+			j = j + 1;
+		}
+		i = i + 1;
+	}
+	return 1;
+}

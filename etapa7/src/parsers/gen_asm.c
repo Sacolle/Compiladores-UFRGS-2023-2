@@ -348,11 +348,31 @@ void parse_functions(Tac* tac_list, Btree* alias_tree){
 	}
 }
 
+int operand_instruction(int type){
+	switch (type){
+	case TAC_MOVE:
+	case TAC_ADD:
+	case TAC_SUB:
+	case TAC_MUL:
+	case TAC_DIV:
+	case TAC_CALL :
+	case TAC_ARG :
+	case TAC_READ :
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+
 void tac_mov_elimination(Tac* tac_list){
 	Tac* tac = tac_list;
 	Tac* to_free_tac = NULL;
 	while(tac != NULL){
-		if(tac->type == TAC_MOVE && tac->op1 == tac->prev->out){
+		if(tac->type == TAC_MOVE && 
+		operand_instruction(tac->prev->type) && 
+		tac->op1 == tac->prev->out)
+		{
 			tac->prev->out = tac->out;
 
 			tac->prev->next = tac->next;
